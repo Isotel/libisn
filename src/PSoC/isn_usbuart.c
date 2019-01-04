@@ -1,5 +1,5 @@
 #include "project.h"
-#include "isn_usbuart.h"
+#include "PSoC/isn_usbuart.h"
 
 #define TXBUF_SIZE  64
 #define RXBUF_SIZE  64

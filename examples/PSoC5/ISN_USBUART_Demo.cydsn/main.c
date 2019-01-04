@@ -1,5 +1,5 @@
 #include "project.h"
-#include "isn_usbuart.h"
+#include "PSoC/isn_usbuart.h"
 #include "isn_frame.h"
 #include "isn_msg.h"
 
@@ -144,7 +144,7 @@ int main(void)
         {ISN_PROTO_MSG, &isn_message},
         {ISN_PROTO_OTHERWISE, &isn_terminal}
     };
-    isn_frame_init(ISN_FRAME_MODE_SHORT, isn_bindings, &isn_usbuart, &counter_1kHz, 100 /*ms*/);
+    isn_frame_init(ISN_FRAME_MODE_COMPACT, isn_bindings, &isn_usbuart, &counter_1kHz, 100 /*ms*/);
     CySysTickStart();
     CySysTickSetCallback(0, systick_1kHz);
     PWM_LEDB_Start();
