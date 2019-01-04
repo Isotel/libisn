@@ -149,12 +149,13 @@ const uint8_t * isn_message_recv(const uint8_t *buf, size_t size, isn_layer_t *c
 }
 
 
-void isn_msg_sched() {
+int isn_msg_sched() {
     if (pending) {
         if (parent_driver->getsendbuf(NULL, 1) > 0) {    // Test if we have at least 1 byte space to send?
             pending = isn_msg_sendnext();
         }
     }
+    return pending;
 }
 
 

@@ -81,7 +81,7 @@
 #define ISN_MSG_PRI_NORMAL          0x04
 #define ISN_MSG_PRI_LOW             0x01
 
-#define ISN_MSG_DESC_END            { 1, 0, NULL, "%!" }
+#define ISN_MSG_DESC_END(pri)       { pri, 0, NULL, "%!" }
 
 #define ISN_MSG_TABLE_SIZE(table)   (sizeof(table) / sizeof(isn_msg_table_t))
 
@@ -111,8 +111,11 @@ extern isn_layer_t isn_message;
 void isn_msg_init(isn_msg_table_t* messages, uint8_t size, isn_layer_t* parent);
 
 
-/** Schedule received callbacks and send those marked by isn_msg_send() or isn_msg_sendby() */
-void isn_msg_sched();
+/** Schedule received callbacks and send those marked by isn_msg_send() or isn_msg_sendby() 
+ * 
+ * \returns 0 when no more messages are pending for transmission
+ */
+int isn_msg_sched();
 
 /** Send message
  *

@@ -27,10 +27,52 @@
  * ISN Layer (Driver)
  */
 typedef struct isn_layer_s {
-    int             (*getsendbuf)(uint8_t **buf, size_t size);  // Returns point to allocated buffer to be passed to send()
-    int             (*send)(uint8_t *buf, size_t size);         // Returns number of bytes sent or negative on error
-    const uint8_t * (*recv)(const uint8_t *buf, size_t size, struct isn_layer_s *caller); // Returns the same receive pointer to free it, or NULL if it is not ready to be freed
-    void            (*free)(const uint8_t *buf);                // Used to free a buffer provided by recv() which returned NULL
+    /** Allocate buffer for transmission thru layers
+     * 
+     * If buf is NULL then function only performs a check on availability and returns
+     * possible size for allocation. Once buffer is allocated it will be automatically
+     * freed by the send() below. Otherwise user needs to call free() function below.
+     * 
+     * \param buf reference to a local pointer, which is updated, pointed to, allocated buffer
+     * \param size requested size
+     * \returns obtained size
+     */
+    int (*getsendbuf)(uint8_t **buf, size_t size);
+
+    /** Send Data
+     * 
+     * buf should be first allocated with the getsendbuf() which at the same time prepares space
+     * for lower layers. buf returned by the getsendbuf() should be filled with data and 
+     * passed to this function. It also frees the buffer (so user should not call free() 
+     * function below)
+     * 
+     * \param buf returned by the getsendbuf()
+     * \param size which should be equal or less than the one returned by the getsendbuf()
+     * \return number of bytes sent
+     */
+    int (*send)(uint8_t *buf, size_t size);
+
+    /** Receive Data
+     * 
+     * If low-level driver have single buffer implementations then they will request
+     * the buffer to be returned on return, to notify them that it's free. Multi-buffer
+     * implementation may return NULL, and later release it with free().
+     * 
+     * \param buf pointer to received data
+     * \param size size of the received data
+     * \param caller device driver structure, enbles simple echoing or multi-path replies
+     * \returns buf pointer, same as the one provided or NULL
+     */
+    const uint8_t * (*recv)(const uint8_t *buf, size_t size, struct isn_layer_s *caller);
+
+    /** Free Buffer
+     * 
+     * Free buffer either provided by getsendbuf() or as received by the recv()
+     * 
+     * Note: current implementations only have single buffer on receive, so it
+     *   only relates to the getsendbuf()
+     */
+    void (*free)(const uint8_t *buf);
 } isn_layer_t;
 
 /**
@@ -47,6 +89,7 @@ typedef struct {
 typedef void* (* isn_events_handler_t)(const void* arg);
 
 /* Helpers */
-#define LAMBDA(c_) ({ c_ _;})
+#define LAMBDA(c_)      ({ c_ _;})
+#define assert2(x)      (void)(x)
 
 #endif

@@ -1,6 +1,6 @@
 #include "isn_frame.h"
 
-#define RECV_BUFSIZE            64                  // max short/compact frame len
+#define FRAME_MAXSIZE           64                  // max short/compact frame len
 #define SNCF_CRC8_POLYNOMIAL    ((uint8_t) 0x4D)    // best polynom for data sizes up to 64 bytes
 
 static isn_bindings_t *bindings_drivers;
@@ -27,6 +27,7 @@ static uint8_t crc8(const uint8_t b) {
  * Allocate a byte more for a header (protocol number) and optional checksum at the end
  */
 int isn_frame_getsendbuf(uint8_t **buf, size_t size) {
+    if (size > FRAME_MAXSIZE) size = FRAME_MAXSIZE;       // limited by the frame protocol
     int xs = 1 + (int)crc_enabled;
     xs = parent_driver->getsendbuf(buf, size + xs) - xs;
     if (*buf) (*buf)++;
@@ -41,7 +42,7 @@ void isn_frame_free(const uint8_t *buf) {
 
 int isn_frame_send(uint8_t *buf, size_t size) {
     uint8_t *start = --buf;
-
+    assert(size <= FRAME_MAXSIZE);
     *buf = 0xC0 - 1 + size;             // Header, assuming short frame
     if (crc_enabled) {
         *buf ^= 0x40;                   // Update header for the CRC (0x40 was set just above)
@@ -61,8 +62,10 @@ static void pass(int protocol, const uint8_t * buf, uint8_t size, isn_layer_t *c
     do {
         layer++;
         if (layer->protocol == protocol) {
-            if (layer->driver->recv) layer->driver->recv(buf, size, caller);
-            return;
+            if (layer->driver->recv) {
+                assert2( layer->driver->recv(buf, size, caller) == buf );
+                return;
+            }
         }
     }
     while (layer->protocol >= 0);
@@ -77,7 +80,7 @@ const uint8_t * isn_frame_recv(const uint8_t *buf, size_t size, isn_layer_t *cal
 
     static driver_input_state_t state = IS_NONE;
     static uint8_t crc;
-    static uint8_t recv_buf[RECV_BUFSIZE];
+    static uint8_t recv_buf[FRAME_MAXSIZE];
     static uint8_t recv_size = 0;
     static uint8_t recv_len  = 0;
     static uint32_t last_ts  = 0;

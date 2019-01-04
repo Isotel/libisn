@@ -133,9 +133,9 @@ isn_layer_t isn_terminal = {
 int main(void)
 {
     static isn_msg_table_t isn_msg_table[] = {
-        { 1, sizeof(uint64_t), serial_cb, "%T0{Example} V1.0 {#sno}={%<Lx}" },
-        { 1, sizeof(led_t),    led_cb,    "LED {:blue}={%hu:Off,On}" },
-        ISN_MSG_DESC_END
+        { 0, sizeof(uint64_t), serial_cb, "%T0{Example} V1.0 {#sno}={%<Lx}" },
+        { 0, sizeof(led_t),    led_cb,    "LED {:blue}={%hu:Off,On}" },
+        ISN_MSG_DESC_END(0)
     };
     isn_msg_init(isn_msg_table, ISN_MSG_TABLE_SIZE(isn_msg_table), &isn_frame);
 
@@ -155,8 +155,9 @@ int main(void)
 
     while(1) {
         isn_usbuart_poll();
-        isn_msg_sched();
         user1_streamout();
-        asm volatile("wfi");
+        if ( !isn_msg_sched() ) {
+            asm volatile("wfi");
+        }
     }
 }
