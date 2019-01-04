@@ -21,7 +21,10 @@ int isn_usbuart_getsendbuf(uint8_t **buf, size_t size) {
         }
         return (size > TXBUF_SIZE) ? TXBUF_SIZE : size;
     }
-    return 0;
+    if (buf) {
+        *buf = NULL;
+    }
+    return -1;
 }
 
 void isn_usbuart_free(const uint8_t *buf) {

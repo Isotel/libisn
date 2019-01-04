@@ -33,9 +33,12 @@ typedef struct isn_layer_s {
      * possible size for allocation. Once buffer is allocated it will be automatically
      * freed by the send() below. Otherwise user needs to call free() function below.
      * 
+     * Note that size 0 still means availability, as it stands for empty packet.
+     * If there is no space available function must return -1.
+     * 
      * \param buf reference to a local pointer, which is updated, pointed to, allocated buffer
      * \param size requested size
-     * \returns obtained size
+     * \returns obtained size, and buf pointer is set; if size cannot be obtained buf is (must be) set to NULL
      */
     int (*getsendbuf)(uint8_t **buf, size_t size);
 

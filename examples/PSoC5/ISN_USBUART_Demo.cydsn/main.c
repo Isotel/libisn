@@ -41,7 +41,9 @@ void *led_cb(const void *data) {
 
 int isn_user_getsendbuf(uint8_t **buf, size_t size) {
     int osize = isn_frame.getsendbuf(buf, size+1);
-    if (buf) (*buf)++; // add protocol header at the front
+    if (buf) {
+        if (*buf) (*buf)++; // add protocol header at the front
+    }
     return osize-1;
 }
 

@@ -30,7 +30,9 @@ int isn_frame_getsendbuf(uint8_t **buf, size_t size) {
     if (size > FRAME_MAXSIZE) size = FRAME_MAXSIZE;       // limited by the frame protocol
     int xs = 1 + (int)crc_enabled;
     xs = parent_driver->getsendbuf(buf, size + xs) - xs;
-    if (buf) (*buf)++;
+    if (buf) {
+        if (*buf) (*buf)++;
+    }
     return xs;
 }
 
