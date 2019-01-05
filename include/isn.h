@@ -23,10 +23,13 @@
 #define ISN_PROTO_PING      0x00
 #define ISN_PROTO_OTHERWISE -1
 
+/** C-like Weak Abstract class of isn_layer_t */
+typedef void isn_layer_t;
+
 /**
  * ISN Layer (Driver)
  */
-typedef struct isn_layer_s {
+typedef struct isn_driver_s {
     /** Allocate buffer for transmission thru layers
      * 
      * If buf is NULL then function only performs a check on availability and returns
@@ -40,7 +43,7 @@ typedef struct isn_layer_s {
      * \param size requested size
      * \returns obtained size, and buf pointer is set; if size cannot be obtained buf is (must be) set to NULL
      */
-    int (*getsendbuf)(uint8_t **buf, size_t size);
+    int (*getsendbuf)(isn_layer_t *drv, uint8_t **buf, size_t size);
 
     /** Send Data
      * 
@@ -53,7 +56,7 @@ typedef struct isn_layer_s {
      * \param size which should be equal or less than the one returned by the getsendbuf()
      * \return number of bytes sent
      */
-    int (*send)(uint8_t *buf, size_t size);
+    int (*send)(isn_layer_t *drv, uint8_t *buf, size_t size);
 
     /** Receive Data
      * 
@@ -66,7 +69,7 @@ typedef struct isn_layer_s {
      * \param caller device driver structure, enbles simple echoing or multi-path replies
      * \returns buf pointer, same as the one provided or NULL
      */
-    const uint8_t * (*recv)(const uint8_t *buf, size_t size, struct isn_layer_s *caller);
+    const uint8_t * (*recv)(isn_layer_t *drv, const uint8_t *buf, size_t size, struct isn_driver_s *caller);
 
     /** Free Buffer
      * 
@@ -75,8 +78,9 @@ typedef struct isn_layer_s {
      * Note: current implementations only have single buffer on receive, so it
      *   only relates to the getsendbuf()
      */
-    void (*free)(const uint8_t *buf);
-} isn_layer_t;
+    void (*free)(isn_layer_t *drv, const uint8_t *buf);
+}
+isn_driver_t;
 
 /**
  * ISN Protocol to Layer Drivers Bindings
@@ -84,7 +88,8 @@ typedef struct isn_layer_s {
 typedef struct {
     int protocol;
     isn_layer_t *driver;
-} isn_bindings_t;
+}
+isn_bindings_t;
 
 /**
  * Callback event handler
@@ -92,6 +97,7 @@ typedef struct {
 typedef void* (* isn_events_handler_t)(const void* arg);
 
 /* Helpers */
+#define SIZEOF(x)       (sizeof (x) / sizeof (*x))
 #define LAMBDA(c_)      ({ c_ _;})
 #define assert2(x)      (void)(x)
 

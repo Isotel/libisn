@@ -83,8 +83,6 @@
 
 #define ISN_MSG_DESC_END(pri)       { pri, 0, NULL, "%!" }
 
-#define ISN_MSG_TABLE_SIZE(table)   (sizeof(table) / sizeof(isn_msg_table_t))
-
 typedef uint8_t isn_msg_size_t;
 
 typedef struct {
@@ -92,30 +90,49 @@ typedef struct {
     isn_msg_size_t       size;      ///< size of data
     isn_events_handler_t handler;   ///< callback handler, or NULL if a message contains no arguments
     const char*          desc;      ///< pointer to message descriptor
-} isn_msg_table_t;
+}
+isn_msg_table_t;
 
 extern uint8_t handler_priority;
+
+#define RECV_MESSAGE_SIZE           64
+
+typedef struct {
+    /* ISN Abstract Class Driver */
+    isn_driver_t drv;
+
+    /* Private data */
+    isn_driver_t* parent_driver;
+    isn_msg_table_t* isn_msg_table;             ///< Ref to the message table
+    uint8_t isn_msg_table_size;                 ///< It's size
+    uint8_t message_buffer[RECV_MESSAGE_SIZE];  ///< Receive buffer
+    uint8_t isn_msg_received_msgnum;            ///< Receive buffer's message number to which isn_msg_received_data belongs
+    void* isn_msg_received_data;                ///< Receive buffer's pointer
+    const void *handler_input;                  ///< Copy of handlers input data to be used with isn_msg_isinput_valid() only
+    int32_t handler_msgnum;                     ///< Message number of a handler in a call
+    uint8_t handler_priority;
+    uint8_t pending;
+    uint8_t msgnum;                             ///< Last msgnum sent
+} 
+isn_message_t;
 
 /*----------------------------------------------------------------------*/
 /* Public functions                                                     */
 /*----------------------------------------------------------------------*/
-
-/** ISN Layer Driver */
-extern isn_layer_t isn_message;
 
 /** Initialize Message Layer
  * 
  * \arg message a pointer to application table of messages
  * \arg size of the table, which is equalt to number of messages in a table
  */
-void isn_msg_init(isn_msg_table_t* messages, uint8_t size, isn_layer_t* parent);
+void isn_msg_init(isn_message_t *obj, isn_msg_table_t* messages, uint8_t size, isn_layer_t* parent);
 
 
 /** Schedule received callbacks and send those marked by isn_msg_send() or isn_msg_sendby() 
  * 
  * \returns 0 when no more messages are pending for transmission
  */
-int isn_msg_sched();
+int isn_msg_sched(isn_message_t *obj);
 
 /** Send message
  *
@@ -123,7 +140,7 @@ int isn_msg_sched();
  * \param priority defines order in which messages are sent out.
  *        Setting MSB bit 0x80 will request to send out descriptors instead of a data
  */
-void isn_msg_send(uint8_t message_id, uint8_t priority);
+void isn_msg_send(isn_message_t *obj, uint8_t message_id, uint8_t priority);
 
 /** Send message quickly by callback handler given msgnum, start of the search
  *
@@ -132,7 +149,7 @@ void isn_msg_send(uint8_t message_id, uint8_t priority);
  *        Setting MSB bit 0x80 will request to send out descriptors instead of a data
  * \param returns message_id on success otherwise 0xFF
  */
-uint8_t isn_msg_sendqby(isn_events_handler_t hnd, uint8_t priority, uint8_t msgnum);
+uint8_t isn_msg_sendqby(isn_message_t *obj, isn_events_handler_t hnd, uint8_t priority, uint8_t msgnum);
 
 /** Send message by callback handler
  *
@@ -141,7 +158,7 @@ uint8_t isn_msg_sendqby(isn_events_handler_t hnd, uint8_t priority, uint8_t msgn
  *        Setting MSB bit 0x80 will request to send out descriptors instead of a data
  * \param returns message_id on success otherwise 0xFF
  */
-static inline uint8_t isn_msg_sendby(isn_events_handler_t hnd, uint8_t priority) {return isn_msg_sendqby(hnd,priority,0);}
+static inline uint8_t isn_msg_sendby(isn_message_t *obj, isn_events_handler_t hnd, uint8_t priority) {return isn_msg_sendqby(obj,hnd,priority,0);}
 
 /**
  * Callback may call this function to confirm that input relates
@@ -151,13 +168,13 @@ static inline uint8_t isn_msg_sendby(isn_events_handler_t hnd, uint8_t priority)
  * 
  * \returns Non-zero if valid and argument is non-zero, otherwise 0
  */
-int isn_msg_isinput_valid(const void *arg);
+int isn_msg_isinput_valid(isn_message_t *obj, const void *arg);
 
 /**
  * To be used within the callback, it may ask with which priority
  * was it called to be able to distinguish also from external
  * (HIGHEST) queries and internal ones
  */
-static inline int isn_msg_isquery() {return handler_priority == ISN_MSG_PRI_HIGHEST;}
+static inline int isn_msg_isquery(isn_message_t *obj) {return obj->handler_priority == ISN_MSG_PRI_HIGHEST;}
 
 #endif

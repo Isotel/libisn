@@ -11,18 +11,37 @@
 /* DEFINITIONS                                                        */
 /*--------------------------------------------------------------------*/
 
+#define ISN_FRAME_MAXSIZE   64      ///< max short/compact frame len
+
 typedef enum {
-    ISN_FRAME_MODE_SHORT    = 0,    // 1-byte overhead (header)
-    ISN_FRAME_MODE_COMPACT  = 1     // 2-bytes overhead (header + 8-bit crc)
-} isn_frame_mode_t;
+    ISN_FRAME_MODE_SHORT    = 0,    ///< 1-byte overhead (header)
+    ISN_FRAME_MODE_COMPACT  = 1     ///< 2-bytes overhead (header + 8-bit crc)
+}
+isn_frame_mode_t;
+
+typedef struct {
+    /* ISN Abstract Class Driver */
+    isn_driver_t drv;
+
+    /* Private data */
+    isn_driver_t* parent_driver;
+    isn_bindings_t *bindings_drivers;
+    isn_frame_mode_t crc_enabled;
+    volatile uint32_t *sys_counter;
+    uint32_t frame_timeout;
+
+    uint8_t state;
+    uint8_t crc;
+    uint8_t recv_buf[ISN_FRAME_MAXSIZE];
+    uint8_t recv_size;
+    uint8_t recv_len;
+    uint32_t last_ts;
+}
+isn_frame_t;
 
 /*----------------------------------------------------------------------*/
 /* Public functions                                                     */
 /*----------------------------------------------------------------------*/
-
-/** ISN Layer Driver */
-extern isn_layer_t isn_frame;
-
 
 /** Short and Compact Frame Layer
  * 
@@ -34,6 +53,6 @@ extern isn_layer_t isn_frame;
  * \param timeout defines period with reference to the counter after which reception is treated as invalid and to be discarded
  *        A 100 ms is a good choice.
  */
-void isn_frame_init(isn_frame_mode_t mode, isn_bindings_t* bindings, isn_layer_t* parent, volatile uint32_t *counter, uint32_t timeout);
+void isn_frame_init(isn_frame_t *obj, isn_frame_mode_t mode, isn_bindings_t* bindings, isn_layer_t* parent, volatile uint32_t *counter, uint32_t timeout);
 
 #endif
