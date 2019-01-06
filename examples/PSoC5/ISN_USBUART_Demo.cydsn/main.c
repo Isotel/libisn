@@ -2,7 +2,9 @@
 #include "PSoC/isn_usbuart.h"
 #include "isn_frame.h"
 #include "isn_msg.h"
+#include "isn_user.h"
 
+isn_user_t isn_user;
 isn_message_t isn_message;
 isn_frame_t isn_frame;
 isn_usbuart_t isn_usbuart;
@@ -38,30 +40,11 @@ void *led_cb(const void *data) {
     return &led;
 }
 
-
 /*----------------------------------------------------------*/
 /* Transparent I/O User Layer                               */
 /*----------------------------------------------------------*/
 
-int isn_user_getsendbuf(isn_layer_t *drv, uint8_t **buf, size_t size) {
-    int osize = isn_frame.drv.getsendbuf(&isn_frame, buf, size+1);
-    if (buf) {
-        if (*buf) (*buf)++; // add protocol header at the front
-    }
-    return osize-1;
-}
-
-void isn_user_free(isn_layer_t *drv, const uint8_t *buf) {
-    if (buf) isn_frame.drv.free(&isn_frame, buf-1);
-}
-
-int isn_user_send(isn_layer_t *drv, uint8_t *buf, size_t size) {
-    *(--buf) = ISN_PROTO_USER1;
-    isn_frame.drv.send(&isn_frame, buf, size+1);
-    return 0;
-}
-
-const uint8_t * isn_user_recv(isn_layer_t *drv, const uint8_t *buf, size_t size, isn_driver_t *caller) {
+const uint8_t * userstream_recv(isn_layer_t *drv, const uint8_t *buf, size_t size, isn_driver_t *caller) {    
     uint8_t *obuf = NULL;
     if (caller->getsendbuf(caller, &obuf, size) == size) {
         memcpy(obuf, buf, size);
@@ -73,27 +56,26 @@ const uint8_t * isn_user_recv(isn_layer_t *drv, const uint8_t *buf, size_t size,
     return buf;
 }
 
-isn_driver_t isn_user = {
-    isn_user_getsendbuf,
-    isn_user_send,
-    isn_user_recv,
-    isn_user_free
-};
-
-void user1_streamout() {
+void userstream_generate() {
     if (trigger > 1000) {
         trigger = 0;        
         uint8_t *obuf;
-        if (isn_user.getsendbuf(NULL, &obuf, 5) == 5) {
+        if (isn_user.drv.getsendbuf(&isn_user, &obuf, 5) == 5) {
             memcpy(obuf, "User\n", 5);
-            isn_user.send(NULL, obuf, 5);
+            isn_user.drv.send(&isn_user, obuf, 5);
         }
         else {
-            isn_user.free(NULL, obuf);
+            isn_user.drv.free(&isn_user, obuf);
         }
     }
 }
 
+isn_driver_t userstream = {
+    NULL,
+    NULL,
+    userstream_recv,
+    NULL
+};
 
 /*----------------------------------------------------------*/
 /* Terminal I/O, Simple Echo                                */
@@ -131,7 +113,6 @@ isn_driver_t isn_terminal = {
     NULL
 };
 
-
 /*----------------------------------------------------------*/
 /* PSoC Start                                               */
 /*----------------------------------------------------------*/
@@ -144,6 +125,7 @@ int main(void)
         ISN_MSG_DESC_END(0)
     };
     isn_msg_init(&isn_message, isn_msg_table, SIZEOF(isn_msg_table), &isn_frame);
+    isn_user_init(&isn_user, &userstream, &isn_frame, ISN_PROTO_USER1);
 
     static isn_bindings_t isn_bindings[] = {
         {ISN_PROTO_USER1, &isn_user},
@@ -161,7 +143,7 @@ int main(void)
 
     while(1) {
         isn_usbuart_poll(&isn_usbuart);
-        user1_streamout();
+        userstream_generate();
         if ( !isn_msg_sched(&isn_message) ) {
             asm volatile("wfi");
         }

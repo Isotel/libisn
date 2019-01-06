@@ -151,5 +151,5 @@ void isn_msg_init(isn_message_t *obj, isn_msg_table_t* messages, uint8_t size, i
     obj->handler_msgnum = -1;
     obj->handler_priority = 0;
     obj->pending = 1;
-    obj->msgnum = 0;                  // TODO: move to obj struct
+    obj->msgnum = 0;
 }

@@ -13,6 +13,8 @@
 #define ISN_PROTO_MSG       0x7F
 #define ISN_PROTO_TRANS     0x7E
 #define ISN_PROTO_TRANL     0x7D
+
+#define ISN_PROTO_USERMAX   ISN_PROTO_USER7
 #define ISN_PROTO_USER7     0x07
 #define ISN_PROTO_USER6     0x06
 #define ISN_PROTO_USER5     0x05
@@ -20,6 +22,7 @@
 #define ISN_PROTO_USER3     0x03
 #define ISN_PROTO_USER2     0x02
 #define ISN_PROTO_USER1     0x01
+
 #define ISN_PROTO_PING      0x00
 #define ISN_PROTO_OTHERWISE -1
 

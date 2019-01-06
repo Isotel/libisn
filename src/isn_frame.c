@@ -136,10 +136,10 @@ const uint8_t * isn_frame_recv(isn_layer_t *drv, const uint8_t *buf, size_t size
 
 
 void isn_frame_init(isn_frame_t *obj, isn_frame_mode_t mode, isn_bindings_t* bindings, isn_layer_t* parent, volatile uint32_t *counter, uint32_t timeout) {
-    obj->drv.getsendbuf = isn_frame_getsendbuf;
-    obj->drv.send = isn_frame_send;
-    obj->drv.recv = isn_frame_recv;
-    obj->drv.free = isn_frame_free;
+    obj->drv.getsendbuf   = isn_frame_getsendbuf;
+    obj->drv.send         = isn_frame_send;
+    obj->drv.recv         = isn_frame_recv;
+    obj->drv.free         = isn_frame_free;
 
     obj->parent_driver    = parent;
     obj->crc_enabled      = mode;
