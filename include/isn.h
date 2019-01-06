@@ -33,6 +33,19 @@ typedef void isn_layer_t;
  * ISN Layer (Driver)
  */
 typedef struct isn_driver_s {
+    /** Receive Data
+     * 
+     * If low-level driver have single buffer implementations then they will request
+     * the buffer to be returned on return, to notify them that it's free. Multi-buffer
+     * implementation may return NULL, and later release it with free().
+     * 
+     * \param buf pointer to received data
+     * \param size size of the received data
+     * \param caller device driver structure, enbles simple echoing or multi-path replies
+     * \returns buf pointer, same as the one provided or NULL
+     */
+    const uint8_t * (*recv)(isn_layer_t *drv, const uint8_t *buf, size_t size, struct isn_driver_s *caller);
+
     /** Allocate buffer for transmission thru layers
      * 
      * If buf is NULL then function only performs a check on availability and returns
@@ -61,19 +74,6 @@ typedef struct isn_driver_s {
      */
     int (*send)(isn_layer_t *drv, uint8_t *buf, size_t size);
 
-    /** Receive Data
-     * 
-     * If low-level driver have single buffer implementations then they will request
-     * the buffer to be returned on return, to notify them that it's free. Multi-buffer
-     * implementation may return NULL, and later release it with free().
-     * 
-     * \param buf pointer to received data
-     * \param size size of the received data
-     * \param caller device driver structure, enbles simple echoing or multi-path replies
-     * \returns buf pointer, same as the one provided or NULL
-     */
-    const uint8_t * (*recv)(isn_layer_t *drv, const uint8_t *buf, size_t size, struct isn_driver_s *caller);
-
     /** Free Buffer
      * 
      * Free buffer either provided by getsendbuf() or as received by the recv()
@@ -84,6 +84,14 @@ typedef struct isn_driver_s {
     void (*free)(isn_layer_t *drv, const uint8_t *buf);
 }
 isn_driver_t;
+
+/**
+ * ISN Layer Receiver only
+ */
+typedef struct {
+    const uint8_t * (*recv)(isn_layer_t *drv, const uint8_t *buf, size_t size, isn_driver_t *caller);
+}
+isn_receiver_t;
 
 /**
  * ISN Protocol to Layer Drivers Bindings

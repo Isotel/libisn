@@ -1,3 +1,8 @@
+/** \file
+ *  \author Uros Platise <uros@isotel.eu>
+ *  \see ...
+ */
+
 #include "project.h"
 #include "PSoC/isn_usbuart.h"
 #include "isn_frame.h"
@@ -28,7 +33,6 @@ typedef struct {
 static uint64_t serial = 0x1234567890ABCDEF;
 static led_t    led    = {1};
 
-
 void *serial_cb(const void *data) {
     return &serial;
 }
@@ -39,6 +43,12 @@ void *led_cb(const void *data) {
     }
     return &led;
 }
+
+static isn_msg_table_t isn_msg_table[] = {
+    { 0, sizeof(uint64_t), serial_cb, "%T0{Example} V1.0 {#sno}={%<Lx}" },
+    { 0, sizeof(led_t),    led_cb,    "LED {:blue}={%hu:Off,On}" },
+    ISN_MSG_DESC_END(0)
+};
 
 /*----------------------------------------------------------*/
 /* Transparent I/O User Layer                               */
@@ -70,18 +80,11 @@ void userstream_generate() {
     }
 }
 
-isn_driver_t userstream = {
-    NULL,
-    NULL,
-    userstream_recv,
-    NULL
-};
-
 /*----------------------------------------------------------*/
-/* Terminal I/O, Simple Echo                                */
+/* Terminal I/O, Simple Echo and Ping Handler               */
 /*----------------------------------------------------------*/
 
-const uint8_t * isn_terminal_recv(isn_layer_t *drv, const uint8_t *buf, size_t size, isn_driver_t *caller) {
+const uint8_t * terminal_recv(isn_layer_t *drv, const uint8_t *buf, size_t size, isn_driver_t *caller) {
     uint8_t *obuf = NULL;
 
     if (size==1 && *buf==ISN_PROTO_PING) {
@@ -106,39 +109,27 @@ const uint8_t * isn_terminal_recv(isn_layer_t *drv, const uint8_t *buf, size_t s
     return buf;
 }
 
-isn_driver_t isn_terminal = {
-    NULL,
-    NULL,
-    isn_terminal_recv,
-    NULL
-};
-
 /*----------------------------------------------------------*/
 /* PSoC Start                                               */
 /*----------------------------------------------------------*/
 
+static isn_bindings_t isn_bindings[] = {
+    {ISN_PROTO_USER1, &(isn_receiver_t){userstream_recv} },
+    {ISN_PROTO_MSG, &isn_message},
+    {ISN_PROTO_OTHERWISE, &(isn_receiver_t){terminal_recv} }
+};
+
 int main(void)
 {
-    static isn_msg_table_t isn_msg_table[] = {
-        { 0, sizeof(uint64_t), serial_cb, "%T0{Example} V1.0 {#sno}={%<Lx}" },
-        { 0, sizeof(led_t),    led_cb,    "LED {:blue}={%hu:Off,On}" },
-        ISN_MSG_DESC_END(0)
-    };
     isn_msg_init(&isn_message, isn_msg_table, SIZEOF(isn_msg_table), &isn_frame);
     isn_user_init(&isn_user, &userstream, &isn_frame, ISN_PROTO_USER1);
 
-    static isn_bindings_t isn_bindings[] = {
-        {ISN_PROTO_USER1, &isn_user},
-        {ISN_PROTO_MSG, &isn_message},
-        {ISN_PROTO_OTHERWISE, &isn_terminal}
-    };
     isn_frame_init(&isn_frame, ISN_FRAME_MODE_COMPACT, isn_bindings, &isn_usbuart, &counter_1kHz, 100 /*ms*/);
     CySysTickStart();
     CySysTickSetCallback(0, systick_1kHz);
     PWM_LEDB_Start();
     PWM_HS_Start();
     CyGlobalIntEnable;
-
     isn_usbuart_init(&isn_usbuart, USBUART_3V_OPERATION, &isn_frame);
 
     while(1) {
