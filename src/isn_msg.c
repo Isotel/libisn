@@ -104,11 +104,13 @@ const uint8_t * isn_message_recv(isn_layer_t *drv, const uint8_t *buf, size_t si
     uint8_t msgnum = buf[1] & 0x7F;
     isn_message_t *obj = (isn_message_t *)drv;
 
+#ifndef FASTLOAD_BUG
     if (msgnum == ISN_MSG_NUM_LAST) {    // speed up loading and mark all mesages to be send out
         for (int i=ISN_MSG_NUM_ID+1; i<(obj->isn_msg_table_size-1); i++) {
             isn_msg_post(obj, i, buf[1] & 0x80 ? ISN_MSG_PRI_DESCRIPTIONLOW : ISN_MSG_PRI_LOW);
         }
     }
+#endif
     if (msgnum >= obj->isn_msg_table_size) { // IDM asks for the last possible, indicating it doesn't know the device, so discard input buf
         msgnum = obj->isn_msg_table_size - 1;
         data_size = 0;
