@@ -6,21 +6,22 @@
 #include "isn_msg.h"
 
 static void send_packet(isn_message_t *obj, uint8_t msgflags, const void* data, isn_msg_size_t size) {
-    uint8_t *buf = NULL;
+    void *dest = NULL;
     int xsize = size + 2;
-    if (obj->parent_driver->getsendbuf(obj->parent_driver, &buf, xsize) == xsize) {
+    if (obj->parent_driver->getsendbuf(obj->parent_driver, &dest, xsize) == xsize) {
+        uint8_t *buf = dest;
         *buf     = ISN_PROTO_MSG;
         *(buf+1) = msgflags;
         memcpy(buf+2, data, size);
         obj->parent_driver->send(obj->parent_driver, buf, xsize);
     }
     else {
-        obj->parent_driver->free(obj->parent_driver, buf);   // we're ok to free NULL to simplify code
+        obj->parent_driver->free(obj->parent_driver, dest);   // we're ok to free NULL to simplify code
     }
 }
 
 /** Send next message by RR scheme */
-int isn_msg_sendnext(isn_message_t *obj) {
+static int isn_msg_sendnext(isn_message_t *obj) {
     isn_msg_table_t* picked = NULL;
     uint8_t* data = NULL;
 
@@ -99,10 +100,11 @@ uint8_t isn_msg_sendqby(isn_message_t *obj, isn_events_handler_t hnd, uint8_t pr
  * data at a time until sendnext() sends reply. However we may handle
  * multiple requests for data since they don't provide any input data.
  */
-const uint8_t * isn_message_recv(isn_layer_t *drv, const uint8_t *buf, size_t size, isn_driver_t *caller) {
+static const void * isn_message_recv(isn_layer_t *drv, const void *src, size_t size, isn_driver_t *caller) {
+    isn_message_t *obj = (isn_message_t *)drv;
+    const uint8_t *buf = src;
     uint8_t data_size = size - 2;
     uint8_t msgnum = buf[1] & 0x7F;
-    isn_message_t *obj = (isn_message_t *)drv;
 
 #ifndef FASTLOAD_BUG
     if (msgnum == ISN_MSG_NUM_LAST) {    // speed up loading and mark all mesages to be send out

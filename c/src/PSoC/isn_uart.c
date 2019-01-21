@@ -14,33 +14,33 @@ static int UART_TX_is_ready(size_t size) {
  * 
  * \returns desired or limited (max) size in the case desired size is too big
  */
-int isn_uart_getsendbuf(isn_layer_t *drv, uint8_t **buf, size_t size) {
+static int isn_uart_getsendbuf(isn_layer_t *drv, void **dest, size_t size) {
     isn_uart_t *obj = (isn_uart_t *)drv;
     if (UART_TX_is_ready(size) && !obj->buf_locked) {
-        if (buf) {
+        if (dest) {
             obj->buf_locked = 1;
-            *buf = obj->txbuf;
+            *dest = obj->txbuf;
         }
         return (size > TXBUF_SIZE) ? TXBUF_SIZE : size;
     }
-    if (buf) {
-        *buf = NULL;
+    if (dest) {
+        *dest = NULL;
     }
     return -1;
 }
 
-void isn_uart_free(isn_layer_t *drv, const uint8_t *buf) {
+static void isn_uart_free(isn_layer_t *drv, const void *ptr) {
     isn_uart_t *obj = (isn_uart_t *)drv;
-    if (buf == obj->txbuf) {
+    if (ptr == obj->txbuf) {
         obj->buf_locked = 0;             // we only support one buffer so we may free
     }
 }
 
-int isn_uart_send(isn_layer_t *drv, uint8_t *buf, size_t size) {
+static int isn_uart_send(isn_layer_t *drv, void *dest, size_t size) {
     assert(size <= TXBUF_SIZE);
-    while( !UART_TX_is_ready(size) ); // todo: timeout assert
-    UART_PutArray(buf, size);
-    isn_uart_free(drv, buf);          // free buffer, however need to block use of buffer until sent out
+    while( !UART_TX_is_ready(size) );   // todo: timeout assert
+    UART_PutArray(dest, size);
+    isn_uart_free(drv, dest);           // free buffer, however need to block use of buffer until sent out
     return size;
 }
 

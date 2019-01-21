@@ -14,12 +14,14 @@ isn_message_t isn_message;
 isn_frame_t isn_frame;
 isn_usbuart_t isn_usbuart;
 
-volatile uint32_t counter_1kHz = 0;
-volatile uint32_t trigger = 0;
+volatile uint32_t counter_1kHz = 0;     ///< Always running timer
+volatile uint32_t trigger = 0;          ///< Time to trigger
+volatile uint32_t rxidle = 0;           ///< How long RX is idle to stop sending on Tx to avoid filling the USBUART PC drivers
 
 static void systick_1kHz(void) {
     counter_1kHz++; 
     trigger++;
+    if (rxidle < UINT32_MAX) rxidle++;  // Do not overflow to avoid generating spurious noise from time to time
 }
 
 /*----------------------------------------------------------*/
@@ -54,22 +56,22 @@ static isn_msg_table_t isn_msg_table[] = {
 /* Transparent I/O User Layer                               */
 /*----------------------------------------------------------*/
 
-const uint8_t * userstream_recv(isn_layer_t *drv, const uint8_t *buf, size_t size, isn_driver_t *caller) {    
-    uint8_t *obuf = NULL;
+const void * userstream_recv(isn_layer_t *drv, const void *src, size_t size, isn_driver_t *caller) {    
+    void *obuf = NULL;
     if (caller->getsendbuf(caller, &obuf, size) == size) {
-        memcpy(obuf, buf, size);
+        memcpy(obuf, src, size);
         caller->send(caller, obuf, size);
     }
     else {
         caller->free(caller, obuf);
     }
-    return buf;
+    return src;
 }
 
 void userstream_generate() {
     if (trigger > 1000) {
         trigger = 0;        
-        uint8_t *obuf;
+        void *obuf;
         if (isn_user.drv.getsendbuf(&isn_user, &obuf, 5) == 5) {
             memcpy(obuf, "User\n", 5);
             isn_user.drv.send(&isn_user, obuf, 5);
@@ -84,8 +86,9 @@ void userstream_generate() {
 /* Terminal I/O, Simple Echo and Ping Handler               */
 /*----------------------------------------------------------*/
 
-const uint8_t * terminal_recv(isn_layer_t *drv, const uint8_t *buf, size_t size, isn_driver_t *caller) {
-    uint8_t *obuf = NULL;
+const void * terminal_recv(isn_layer_t *drv, const void *src, size_t size, isn_driver_t *caller) {
+    void *obuf = NULL;
+    const uint8_t *buf = src;
 
     if (size==1 && *buf==ISN_PROTO_PING) {
         if ( caller->getsendbuf(caller, &obuf, 4)==4 ) {
@@ -123,18 +126,25 @@ int main(void)
 {
     isn_msg_init(&isn_message, isn_msg_table, SIZEOF(isn_msg_table), &isn_frame);
     isn_user_init(&isn_user, &(isn_receiver_t){userstream_recv}, &isn_frame, ISN_PROTO_USER1);
-
     isn_frame_init(&isn_frame, ISN_FRAME_MODE_COMPACT, isn_bindings, &isn_usbuart, &counter_1kHz, 100 /*ms*/);
+
     CySysTickStart();
     CySysTickSetCallback(0, systick_1kHz);
+
     PWM_LEDB_Start();
     PWM_HS_Start();
+
     CyGlobalIntEnable;
     isn_usbuart_init(&isn_usbuart, USBUART_3V_OPERATION, &isn_frame);
 
+    rxidle = 0; // Reset counter as above usb initialization may eat lots of time on Windows to initialize
     while(1) {
-        isn_usbuart_poll(&isn_usbuart);
-        userstream_generate();
+        if (isn_usbuart_poll(&isn_usbuart) > 0) {
+            rxidle = 0;
+        }
+        if (rxidle < 5000/*ms*/) {
+            userstream_generate();
+        }
         if ( !isn_msg_sched(&isn_message) ) {
             asm volatile("wfi");
         }

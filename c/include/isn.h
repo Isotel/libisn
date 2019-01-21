@@ -48,12 +48,12 @@ typedef struct isn_driver_s {
      * the buffer to be returned on return, to notify them that it's free. Multi-buffer
      * implementation may return NULL, and later release it with free().
      * 
-     * \param buf pointer to received data
+     * \param src pointer to received data
      * \param size size of the received data
      * \param caller device driver structure, enbles simple echoing or multi-path replies
      * \returns buf pointer, same as the one provided or NULL
      */
-    const uint8_t * (*recv)(isn_layer_t *drv, const uint8_t *buf, size_t size, struct isn_driver_s *caller);
+    const void * (*recv)(isn_layer_t *drv, const void *src, size_t size, struct isn_driver_s *caller);
 
     /** Allocate buffer for transmission thru layers
      * 
@@ -64,11 +64,11 @@ typedef struct isn_driver_s {
      * Note that size 0 still means availability, as it stands for empty packet.
      * If there is no space available function must return -1.
      * 
-     * \param buf reference to a local pointer, which is updated, pointed to, allocated buffer
+     * \param dest reference to a local pointer, which is updated, pointed to given/allocated buffer
      * \param size requested size
      * \returns obtained size, and buf pointer is set; if size cannot be obtained buf is (must be) set to NULL
      */
-    int (*getsendbuf)(isn_layer_t *drv, uint8_t **buf, size_t size);
+    int (*getsendbuf)(isn_layer_t *drv, void **dest, size_t size);
 
     /** Send Data
      * 
@@ -77,11 +77,11 @@ typedef struct isn_driver_s {
      * passed to this function. It also frees the buffer (so user should not call free() 
      * function below)
      * 
-     * \param buf returned by the getsendbuf()
+     * \param dest returned by the getsendbuf()
      * \param size which should be equal or less than the one returned by the getsendbuf()
      * \return number of bytes sent
      */
-    int (*send)(isn_layer_t *drv, uint8_t *buf, size_t size);
+    int (*send)(isn_layer_t *drv, void *dest, size_t size);
 
     /** Free Buffer
      * 
@@ -90,7 +90,7 @@ typedef struct isn_driver_s {
      * Note: current implementations only have single buffer on receive, so it
      *   only relates to the getsendbuf()
      */
-    void (*free)(isn_layer_t *drv, const uint8_t *buf);
+    void (*free)(isn_layer_t *drv, const void *ptr);
 }
 isn_driver_t;
 
@@ -98,7 +98,7 @@ isn_driver_t;
  * ISN Layer Receiver only
  */
 typedef struct {
-    const uint8_t * (*recv)(isn_layer_t *drv, const uint8_t *buf, size_t size, isn_driver_t *caller);
+    const void * (*recv)(isn_layer_t *drv, const void *buf, size_t size, isn_driver_t *caller);
 }
 isn_receiver_t;
 

@@ -19,11 +19,12 @@ static uint8_t crc8(const uint8_t b) {
 /**
  * Allocate a byte more for a header (protocol number) and optional checksum at the end
  */
-int isn_frame_getsendbuf(isn_layer_t *drv, uint8_t **buf, size_t size) {
+static int isn_frame_getsendbuf(isn_layer_t *drv, void **dest, size_t size) {
     isn_frame_t *obj = (isn_frame_t *)drv;
     if (size > ISN_FRAME_MAXSIZE) size = ISN_FRAME_MAXSIZE; // limited by the frame protocol
     int xs = 1 + (int)obj->crc_enabled;
-    xs = obj->parent_driver->getsendbuf(obj->parent_driver, buf, size + xs) - xs;
+    xs = obj->parent_driver->getsendbuf(obj->parent_driver, dest, size + xs) - xs;
+    uint8_t **buf = (uint8_t **)dest;
     if (buf) {
         if (*buf) (*buf)++;
     }
@@ -31,14 +32,16 @@ int isn_frame_getsendbuf(isn_layer_t *drv, uint8_t **buf, size_t size) {
 }
 
 
-void isn_frame_free(isn_layer_t *drv, const uint8_t *buf) {
+static void isn_frame_free(isn_layer_t *drv, const void *ptr) {
     isn_frame_t *obj = (isn_frame_t *)drv;
-    if (buf) obj->parent_driver->free(obj->parent_driver, buf-1);
+    const uint8_t *buf = ptr;
+    if (buf) obj->parent_driver->free(obj->parent_driver, buf - 1);
 }
 
 
-int isn_frame_send(isn_layer_t *drv, uint8_t *buf, size_t size) {
+static int isn_frame_send(isn_layer_t *drv, void *dest, size_t size) {
     isn_frame_t *obj = (isn_frame_t *)drv;
+    uint8_t *buf = dest;
     uint8_t *start = --buf;
     assert(size <= ISN_FRAME_MAXSIZE);
     *buf = 0xC0 - 1 + size;             // Header, assuming short frame
@@ -74,8 +77,9 @@ static void pass(isn_frame_t *obj, int protocol, const uint8_t * buf, uint8_t si
 #define IS_NONE         0
 #define IS_IN_MESSAGE   1
 
-const uint8_t * isn_frame_recv(isn_layer_t *drv, const uint8_t *buf, size_t size, isn_driver_t *caller) {
+static const void * isn_frame_recv(isn_layer_t *drv, const void *src, size_t size, isn_driver_t *caller) {
     isn_frame_t *obj = (isn_frame_t *)drv;
+    const uint8_t *buf = src;
 
     if ((*(obj->sys_counter) - obj->last_ts) > obj->frame_timeout) {
         obj->state = IS_NONE;
