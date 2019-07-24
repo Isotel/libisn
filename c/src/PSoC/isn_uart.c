@@ -16,6 +16,20 @@
 #include "project.h"
 #include "PSoC/isn_uart.h"
 
+/** PSoC 4100PS uart functions maping*/
+#if(CYDEV_CHIP_FAMILY_USED == CYDEV_CHIP_FAMILY_PSOC4)
+    #define UART_GetNumInTxFifo()       UART_SpiUartGetTxBufferSize()
+    #define UART_PutArray(dest, size)   UART_SpiUartPutArray(dest, size)
+    #define UART_GetNumInRxFifo()       UART_SpiUartGetRxBufferSize()
+
+    static void UART_GetArray(void *buffer, uint32_t size) {
+        uint8_t *buf = (uint8_t *) buffer;   
+        for (uint8_t i=0; i<size; i++) {
+            buf[i] = (uint8_t)UART_SpiUartReadRxData();         
+        }
+    }
+#endif
+
 static int UART_TX_is_ready(size_t size) {
     return ((TXFIFO_SIZE - UART_GetNumInTxFifo()) > size) ? 1 : 0;
 }
