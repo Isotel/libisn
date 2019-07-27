@@ -17,7 +17,7 @@
  */
 
 #include "project.h"
-#include "isn_usbfs.h"
+#include "PSoC/isn_usbfs.h"
 
 /** OUT EP in USB therminology (EP that receives data from the host) */
 #define USB_RECV_EP     1

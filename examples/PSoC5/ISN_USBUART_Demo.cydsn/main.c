@@ -1,7 +1,14 @@
 /** \file
  *  \author Uros Platise <uros@isotel.eu>
- *  \see ...
  */
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * 
+ * (c) Copyright 2019, Isotel, http://isotel.eu
+ */
+
 
 #include "project.h"
 #include "PSoC/isn_usbuart.h"
@@ -132,7 +139,6 @@ int main(void)
     CySysTickSetCallback(0, systick_1kHz);
 
     PWM_LEDB_Start();
-    PWM_HS_Start();
 
     CyGlobalIntEnable;
     isn_usbuart_init(&isn_usbuart, USBUART_3V_OPERATION, &isn_frame);
