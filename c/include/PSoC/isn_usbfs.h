@@ -2,21 +2,16 @@
  *  \author Uros Platise <uros@isotel.eu>
  */
 /*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- * 
  * (c) Copyright 2019, Isotel, http://isotel.eu
  */
 
 
-#ifndef __ISN_USBUART_H__
-#define __ISN_USBUART_H__
+#ifndef __ISN_USBFS_H__
+#define __ISN_USBFS_H__
 
 #include "isn.h"
 
-#define TXBUF_SIZE  64
-#define RXBUF_SIZE  64
+#define USB_BUF_SIZE  64
 
 /** ISN Layer Driver */
 typedef struct {
@@ -25,11 +20,12 @@ typedef struct {
 
     /* Private data */
     isn_driver_t* child_driver;
-    uint8_t txbuf[TXBUF_SIZE];
-    uint8_t rxbuf[RXBUF_SIZE];
+    uint8_t txbuf[USB_BUF_SIZE];
+    uint8_t rxbuf[USB_BUF_SIZE];
     int buf_locked;
+    int next_send_ep;
 }
-isn_usbuart_t;
+isn_usbfs_t;
 
 /*----------------------------------------------------------------------*/
 /* Public functions                                                     */
@@ -38,13 +34,13 @@ isn_usbuart_t;
 /** Polls for a new data received from PC and dispatch them 
  * \returns number of bytes received
  */
-size_t isn_usbuart_poll(isn_usbuart_t *obj);
+size_t isn_usbfs_poll(isn_usbfs_t *obj);
 
 /** Initialize
  * 
- * \param mode USBUART_3V_OPERATION
+ * \param mode USBFS_3V_OPERATION, USBFS_5V_OPERATION, USBFS_DWR_POWER_OPERATION
  * \param child use the next layer, like isn_frame
  */
-void isn_usbuart_init(isn_usbuart_t *obj, int mode, isn_layer_t* child);
+void isn_usbfs_init(isn_usbfs_t *obj, int mode, isn_layer_t* child);
 
 #endif

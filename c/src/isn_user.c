@@ -1,3 +1,15 @@
+/** \file
+ *  \author Uros Platise <uros@isotel.eu>
+ *  \see isn_user.h
+ */
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * 
+ * (c) Copyright 2019, Isotel, http://isotel.eu
+ */
+
 #include "isn_user.h"
 
 static int isn_user_getsendbuf(isn_layer_t *drv, void **dest, size_t size) {
