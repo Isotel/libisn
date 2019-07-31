@@ -22,16 +22,19 @@
     #define UART_PutArray(dest, size)   UART_SpiUartPutArray(dest, size)
     #define UART_GetNumInRxFifo()       UART_SpiUartGetRxBufferSize()
 
+
+extern uint16_t test;    
+    
     static void UART_GetArray(void *buffer, uint32_t size) {
         uint8_t *buf = (uint8_t *) buffer;   
         for (uint8_t i=0; i<size; i++) {
-            buf[i] = (uint8_t)UART_SpiUartReadRxData();         
+            buf[i] = (uint8_t)UART_SpiUartReadRxData();
         }
     }
 #endif
 
 static int UART_TX_is_ready(size_t size) {
-    return ((TXFIFO_SIZE - UART_GetNumInTxFifo()) > size) ? 1 : 0;
+    return ((UART_UART_TX_BUFFER_SIZE - UART_GetNumInTxFifo()) > size) ? 1 : 0;
 }
 
 /**
@@ -46,7 +49,7 @@ static int isn_uart_getsendbuf(isn_layer_t *drv, void **dest, size_t size) {
             obj->buf_locked = 1;
             *dest = obj->txbuf;
         }
-        return (size > TXBUF_SIZE) ? TXBUF_SIZE : size;
+        return (size > UART_TXBUF_SIZE) ? UART_TXBUF_SIZE : size;
     }
     if (dest) {
         *dest = NULL;

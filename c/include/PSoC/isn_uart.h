@@ -14,12 +14,9 @@
 #define __ISN_UART_H__
 
 #include "isn.h"
-    
-#define TXFIFO_SIZE  128
-#define RXFIFO_SIZE  128   
 
-#define TXBUF_SIZE  64
-#define RXBUF_SIZE  64
+#define UART_TXBUF_SIZE  64
+#define UART_RXBUF_SIZE  64
 
 /** ISN Layer Driver */
 typedef struct {
@@ -28,8 +25,8 @@ typedef struct {
 
     /* Private data */
     isn_driver_t* child_driver;
-    uint8_t txbuf[TXBUF_SIZE];
-    uint8_t rxbuf[RXBUF_SIZE];
+    uint8_t txbuf[UART_TXBUF_SIZE];
+    uint8_t rxbuf[UART_RXBUF_SIZE];
     int buf_locked;
 }
 isn_uart_t;
