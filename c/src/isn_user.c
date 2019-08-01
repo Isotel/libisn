@@ -32,14 +32,16 @@ static int isn_user_send(isn_layer_t *drv, void *dest, size_t size) {
     isn_user_t *obj = (isn_user_t *)drv;
     uint8_t *buf = dest;
     *(--buf) = obj->user_id;
-    obj->parent->send(obj->parent, buf, size+1);
-    return 0;
+    return obj->parent->send(obj->parent, buf, size+1);    
 }
 
 static const void* isn_user_recv(isn_layer_t *drv, const void *src, size_t size, isn_driver_t *caller) {
     isn_user_t *obj = (isn_user_t *)drv;
     const uint8_t *buf = src;
-    return obj->child->recv(obj->child, buf+1, size-1, drv);
+    if (*buf == obj->user_id) {
+        return obj->child->recv(obj->child, buf+1, size-1, drv);
+    }
+    return NULL;
 }
 
 void isn_user_init(isn_user_t *obj, isn_layer_t* child, isn_layer_t* parent, uint8_t user_id) {

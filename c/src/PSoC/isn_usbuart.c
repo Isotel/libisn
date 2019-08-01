@@ -1,6 +1,9 @@
 /** \file
  *  \author Uros Platise <uros@isotel.eu>
  *  \see isn_usbuart.h
+ * 
+ * Tested on:
+ *  - Families: PSoC4, PSoC5
  */
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public

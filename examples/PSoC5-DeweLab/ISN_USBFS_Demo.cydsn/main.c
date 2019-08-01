@@ -15,11 +15,13 @@
 #include "isn_frame.h"
 #include "isn_msg.h"
 #include "isn_user.h"
+#include "isn_dispatch.h"
 
 isn_user_t isn_user;
-isn_message_t isn_message;
+isn_message_t isn_message, isn_message2;
 isn_frame_t isn_frame;
 isn_usbfs_t isn_usbfs;
+isn_dispatch_t isn_dispatch;
 
 volatile uint32_t counter_1kHz = 0;     ///< Always running timer
 volatile uint32_t trigger = 0;          ///< Time to trigger
@@ -55,6 +57,12 @@ void *led_cb(const void *data) {
 
 static isn_msg_table_t isn_msg_table[] = {
     { 0, sizeof(uint64_t), serial_cb, "%T0{Example} V1.0 {#sno}={%<Lx}" },
+    { 0, sizeof(led_t),    led_cb,    "LED {:blue}={%hu:Off,On}" },
+    ISN_MSG_DESC_END(0)
+};
+
+static isn_msg_table_t isn_msg_table2[] = {
+    { 0, sizeof(uint64_t), serial_cb, "%T0{Example2} V1.0 {#sno}={%<Lx}" },
     { 0, sizeof(led_t),    led_cb,    "LED {:blue}={%hu:Off,On}" },
     ISN_MSG_DESC_END(0)
 };
@@ -100,6 +108,7 @@ const void * terminal_recv(isn_layer_t *drv, const void *src, size_t size, isn_d
     if (size==1 && *buf==ISN_PROTO_PING) {
         if ( caller->getsendbuf(caller, &obuf, 4)==4 ) {
             isn_msg_send(&isn_message, 1,1);
+            isn_msg_send(&isn_message2, 1,1);
             memcpy(obuf, "ping", 4);
             caller->send(caller, obuf, 4);
         }
@@ -124,24 +133,30 @@ const void * terminal_recv(isn_layer_t *drv, const void *src, size_t size, isn_d
 /*----------------------------------------------------------*/
 
 static isn_bindings_t isn_bindings[] = {
-    {ISN_PROTO_USER1, &isn_user},
+    {ISN_PROTO_FRAME, &isn_frame},
     {ISN_PROTO_MSG, &isn_message},
-    {ISN_PROTO_OTHERWISE, &(isn_receiver_t){terminal_recv} }
+    {ISN_PROTO_USER1, &isn_user},
+    {ISN_PROTO_OTHER, &(isn_receiver_t){terminal_recv} }
 };
 
 int main(void)
 {
-    isn_msg_init(&isn_message, isn_msg_table, SIZEOF(isn_msg_table), &isn_frame);
-    isn_user_init(&isn_user, &(isn_receiver_t){userstream_recv}, &isn_frame, ISN_PROTO_USER1);
-    isn_frame_init(&isn_frame, ISN_FRAME_MODE_SHORT, isn_bindings, &isn_usbfs, &counter_1kHz, 100 /*ms*/);
-
+    PWM_LEDB_Start();
     CySysTickStart();
     CySysTickSetCallback(0, systick_1kHz);
 
-    PWM_LEDB_Start();
+    /* First IDM Device with One Stream Port and dispatch to the Frame Layer for 2nd Device */
+    isn_msg_init(&isn_message, isn_msg_table, SIZEOF(isn_msg_table), &isn_usbfs);
+    isn_user_init(&isn_user, &(isn_receiver_t){userstream_recv}, &isn_usbfs, ISN_PROTO_USER1);
+    isn_dispatch_init(&isn_dispatch, isn_bindings);
 
+    /* Second IDM Device over Frame Layer */
+    isn_msg_init(&isn_message2, isn_msg_table2, SIZEOF(isn_msg_table2), &isn_frame);
+    isn_frame_init(&isn_frame, ISN_FRAME_MODE_SHORT, &isn_message2, NULL, &isn_usbfs, &counter_1kHz, 100 /*ms*/);
+
+    /* Main USBFS */
     CyGlobalIntEnable;
-    isn_usbfs_init(&isn_usbfs, USBFS_DWR_POWER_OPERATION, &isn_frame);
+    isn_usbfs_init(&isn_usbfs, USBFS_DWR_POWER_OPERATION, &isn_dispatch);
 
     rxidle = 0; // Reset counter as above usb initialization may eat lots of time on Windows to initialize
     while(1) {
@@ -151,7 +166,7 @@ int main(void)
         if (rxidle < 5000/*ms*/) {
             userstream_generate();
         }
-        if ( !isn_msg_sched(&isn_message) ) {
+        if ( !isn_msg_sched(&isn_message) && !isn_msg_sched(&isn_message2) ) {
             asm volatile("wfi");
         }
     }

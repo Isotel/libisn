@@ -32,7 +32,6 @@
 #define ISN_PROTO_USER1     0x01
 
 #define ISN_PROTO_PING      0x00
-#define ISN_PROTO_OTHERWISE -1
 
 /** C-like Weak Abstract class of isn_layer_t */
 typedef void isn_layer_t;
@@ -50,7 +49,7 @@ typedef struct isn_driver_s {
      * \param src pointer to received data
      * \param size size of the received data
      * \param caller device driver structure, enbles simple echoing or multi-path replies
-     * \returns buf pointer, same as the one provided or NULL
+     * \returns src buf pointer, same as the one provided or NULL if receiver did not accept the packet
      */
     const void * (*recv)(isn_layer_t *drv, const void *src, size_t size, struct isn_driver_s *caller);
 
@@ -100,15 +99,6 @@ typedef struct {
     const void * (*recv)(isn_layer_t *drv, const void *buf, size_t size, isn_driver_t *caller);
 }
 isn_receiver_t;
-
-/**
- * ISN Protocol to Layer Drivers Bindings
- */
-typedef struct {
-    int protocol;
-    isn_layer_t *driver;
-}
-isn_bindings_t;
 
 /**
  * Callback event handler

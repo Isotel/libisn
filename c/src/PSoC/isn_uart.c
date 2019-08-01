@@ -1,8 +1,10 @@
 /** \file
- *  \author Uros Platise <uros@isotel.eu>
+ *  \author Uros Platise <uros@isotel.eu>, Tomaz Kanalec <tomaz@isotel.eu>
  *  \see isn_uart.c
  * 
- * Tested on CY8CKIT-062-BLE.
+ * Tested on:
+ *  - Families: PSoC4, PSoC6
+ *  - Kits: CY8CKIT-062-BLE
  */
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public

@@ -116,6 +116,8 @@ static const void * isn_message_recv(isn_layer_t *drv, const void *src, size_t s
     uint8_t data_size = size - 2;
     uint8_t msgnum = buf[1] & 0x7F;
 
+    if (*buf != ISN_PROTO_MSG) return NULL;
+
 #ifndef FASTLOAD_BUG
     if (msgnum == ISN_MSG_NUM_LAST) {    // speed up loading and mark all mesages to be send out
         for (int i=ISN_MSG_NUM_ID+1; i<(obj->isn_msg_table_size-1); i++) {

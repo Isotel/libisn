@@ -35,7 +35,7 @@ static int isn_frame_getsendbuf(isn_layer_t *drv, void **dest, size_t size) {
     isn_frame_t *obj = (isn_frame_t *)drv;
     if (size > ISN_FRAME_MAXSIZE) size = ISN_FRAME_MAXSIZE; // limited by the frame protocol
     int xs = 1 + (int)obj->crc_enabled;
-    xs = obj->parent_driver->getsendbuf(obj->parent_driver, dest, size + xs) - xs;
+    xs = obj->parent->getsendbuf(obj->parent, dest, size + xs) - xs;
     uint8_t **buf = (uint8_t **)dest;
     if (buf) {
         if (*buf) (*buf)++;
@@ -47,7 +47,7 @@ static int isn_frame_getsendbuf(isn_layer_t *drv, void **dest, size_t size) {
 static void isn_frame_free(isn_layer_t *drv, const void *ptr) {
     isn_frame_t *obj = (isn_frame_t *)drv;
     const uint8_t *buf = ptr;
-    if (buf) obj->parent_driver->free(obj->parent_driver, buf - 1);
+    if (buf) obj->parent->free(obj->parent, buf - 1);
 }
 
 
@@ -64,27 +64,9 @@ static int isn_frame_send(isn_layer_t *drv, void *dest, size_t size) {
         for (int i=0; i<size; i++) crc = crc8(crc ^ *buf++);
         *buf = crc;
     }
-    obj->parent_driver->send(obj->parent_driver, start, size+1); // Size +1 for the front header
+    obj->parent->send(obj->parent, start, size+1); // Size +1 for the front header
     return size-1-(int)obj->crc_enabled;     // return back userpayload only
 }
-
-
-static void pass(isn_frame_t *obj, int protocol, const uint8_t * buf, uint8_t size, isn_driver_t *caller) {
-    isn_bindings_t *layer = obj->bindings_drivers;
-    layer--;
-    do {
-        layer++;
-        if (layer->protocol == protocol) {
-            isn_driver_t *driver = (isn_driver_t *)layer->driver;
-            if (driver->recv) {
-                assert2( driver->recv(driver, buf, size, caller) == buf );
-                return;
-            }
-        }
-    }
-    while (layer->protocol >= 0);
-}
-
 
 #define IS_NONE         0
 #define IS_IN_MESSAGE   1
@@ -104,7 +86,7 @@ static const void * isn_frame_recv(isn_layer_t *drv, const void *src, size_t siz
             case IS_NONE: {
                 if (*buf > 0x80) {
                     if (obj->recv_size) {
-                        pass(obj, ISN_PROTO_OTHERWISE, obj->recv_buf, obj->recv_size, caller);
+                        if (obj->other) obj->other->recv(obj->other, obj->recv_buf, obj->recv_size, caller);
                         obj->recv_size = obj->recv_len = 0;
                     }
                     obj->state = IS_IN_MESSAGE;
@@ -121,7 +103,7 @@ static const void * isn_frame_recv(isn_layer_t *drv, const void *src, size_t siz
             case IS_IN_MESSAGE: {
                 if (obj->recv_size == obj->recv_len && obj->crc_enabled) {
                     if (*buf == obj->crc) {
-                        pass(obj, obj->recv_buf[0], obj->recv_buf, obj->recv_size, drv);
+                        obj->child->recv(obj->child, obj->recv_buf, obj->recv_size, drv);
                     }
                     obj->recv_size = obj->recv_len = 0;
                     obj->state = IS_NONE;
@@ -132,7 +114,7 @@ static const void * isn_frame_recv(isn_layer_t *drv, const void *src, size_t siz
                         obj->crc = crc8(obj->crc ^ *buf);
                     }
                     else if (obj->recv_size == obj->recv_len) {
-                        pass(obj, obj->recv_buf[0], obj->recv_buf, obj->recv_size, drv);
+                        obj->child->recv(obj->child, obj->recv_buf, obj->recv_size, drv);
                         obj->recv_size = obj->recv_len = 0;
                         obj->state = IS_NONE;
                     }
@@ -144,22 +126,25 @@ static const void * isn_frame_recv(isn_layer_t *drv, const void *src, size_t siz
 
     // flush non-framed (packed) data immediately
     if (obj->recv_size && obj->recv_len == 0) {
-        pass(obj, ISN_PROTO_OTHERWISE, obj->recv_buf, obj->recv_size, caller);
+        if (obj->other) obj->other->recv(obj->other, obj->recv_buf, obj->recv_size, caller);
         obj->recv_size = 0;
     }
     return buf;
 }
 
+void isn_frame_init(isn_frame_t *obj, isn_frame_mode_t mode, isn_layer_t* child, isn_layer_t* other, isn_layer_t* parent, volatile uint32_t *counter, uint32_t timeout) {
+    assert(parent);
+    assert(child);
 
-void isn_frame_init(isn_frame_t *obj, isn_frame_mode_t mode, isn_bindings_t* bindings, isn_layer_t* parent, volatile uint32_t *counter, uint32_t timeout) {
     obj->drv.getsendbuf   = isn_frame_getsendbuf;
     obj->drv.send         = isn_frame_send;
     obj->drv.recv         = isn_frame_recv;
     obj->drv.free         = isn_frame_free;
 
-    obj->parent_driver    = parent;
+    obj->parent           = parent;
     obj->crc_enabled      = mode;
-    obj->bindings_drivers = bindings;
+    obj->child            = child;
+    obj->other            = other;
     obj->sys_counter      = counter;
     obj->frame_timeout    = timeout;
 

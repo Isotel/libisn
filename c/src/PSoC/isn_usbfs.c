@@ -1,10 +1,10 @@
 /** \file
- *  \author <uros@isotel.eu>, <stanislav@isotel.eu>
+ *  \author Uros Platise <uros@isotel.eu>, Stanislav <stanislav@isotel.eu>
  *  \see isn_usbfs.h
  * 
  * Represents the most simple (tiny) implementation of bulk USB 
- * transfer via ne receiving EP 1, and 7 sending EPs with single
- * buffering in C code that should reach sending speeds above 400 kB/s.
+ * transfer via one receiving EP 1, and 7 sending EPs with single
+ * buffering in C code. It should reach sending speeds up to 400 kB/s.
  * 
  * Speed may be improved by adding additional TX and RX FIFOs, 
  * and by zero-padding technique to fill the entire packet.
