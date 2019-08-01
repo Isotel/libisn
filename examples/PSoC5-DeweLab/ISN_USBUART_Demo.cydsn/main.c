@@ -13,11 +13,13 @@
 #include "project.h"
 #include "PSoC/isn_usbuart.h"
 #include "isn_frame.h"
+#include "isn_dispatch.h"
 #include "isn_msg.h"
 #include "isn_user.h"
 
 isn_user_t isn_user;
 isn_message_t isn_message;
+isn_dispatch_t isn_dispatch;
 isn_frame_t isn_frame;
 isn_usbuart_t isn_usbuart;
 
@@ -126,14 +128,15 @@ const void * terminal_recv(isn_layer_t *drv, const void *src, size_t size, isn_d
 static isn_bindings_t isn_bindings[] = {
     {ISN_PROTO_USER1, &isn_user},
     {ISN_PROTO_MSG, &isn_message},
-    {ISN_PROTO_OTHERWISE, &(isn_receiver_t){terminal_recv} }
+    {ISN_PROTO_LISTEND, NULL}
 };
 
 int main(void)
 {
     isn_msg_init(&isn_message, isn_msg_table, SIZEOF(isn_msg_table), &isn_frame);
     isn_user_init(&isn_user, &(isn_receiver_t){userstream_recv}, &isn_frame, ISN_PROTO_USER1);
-    isn_frame_init(&isn_frame, ISN_FRAME_MODE_COMPACT, isn_bindings, &isn_usbuart, &counter_1kHz, 100 /*ms*/);
+    isn_dispatch_init(&isn_dispatch, isn_bindings);
+    isn_frame_init(&isn_frame, ISN_FRAME_MODE_COMPACT, &isn_dispatch, &(isn_receiver_t){terminal_recv}, &isn_usbuart, &counter_1kHz, 100 /*ms*/);
 
     CySysTickStart();
     CySysTickSetCallback(0, systick_1kHz);
