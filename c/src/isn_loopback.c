@@ -10,6 +10,7 @@
  * (c) Copyright 2019, Isotel, http://isotel.eu
  */
 
+#include <string.h>
 #include "isn_loopback.h"
 
 static const void* isn_loopback_recv(isn_layer_t *drv, const void *src, size_t size, isn_driver_t *caller) {

@@ -35,6 +35,6 @@ isn_loopback_t;
  * 
  * \param target layer where data received should be copied to
  */
-void isn_loopback_init(isn_user_t *obj, isn_layer_t* target);
+void isn_loopback_init(isn_loopback_t *obj, isn_layer_t* target);
 
 #endif
