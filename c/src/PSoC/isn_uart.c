@@ -44,7 +44,12 @@
 #endif
 
 static int UART_TX_is_ready(size_t size) {
+#if (UART_TX_BUFFER_SIZE >= 64)
     return ((UART_TX_BUFFER_SIZE - UART_GetNumInTxFifo()) > size) ? 1 : 0;
+#else
+#warning UART may stall CPU because buffer size is less than 64 B    
+    return 1;    
+#endif    
 }
 
 /**
