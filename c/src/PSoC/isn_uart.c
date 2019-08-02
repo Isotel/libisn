@@ -19,8 +19,6 @@
 #include "PSoC/isn_uart.h"
 
 #if(CYDEV_CHIP_FAMILY_USED == CYDEV_CHIP_FAMILY_PSOC4)
-    #define UART_TX_BUFFER_SIZE         UART_UART_TX_BUFFER_SIZE
-
     #define UART_GetNumInTxFifo()       UART_SpiUartGetTxBufferSize()
     #define UART_PutArray(dest, size)   UART_SpiUartPutArray(dest, size)
     #define UART_GetNumInRxFifo()       UART_SpiUartGetRxBufferSize()
