@@ -18,6 +18,8 @@
 #include "isn_dispatch.h"
 #include "isn_loopback.h"
 
+#define TELNET      // Use this option to redirect example2 device over IDM telnet port
+
 isn_user_t isn_user;
 isn_loopback_t isn_loopback;
 isn_message_t isn_message, isn_message2;
@@ -108,7 +110,9 @@ const void * ping_recv(isn_layer_t *drv, const void *src, size_t size, isn_drive
 static isn_bindings_t isn_bindings[] = {
     {ISN_PROTO_USER1, &isn_user},   // higher the faster; we give top speed to the transparent link
     {ISN_PROTO_MSG, &isn_message},
+#ifndef TELNET
     {ISN_PROTO_FRAME, &isn_frame},
+#endif
     {ISN_PROTO_PING, &(isn_receiver_t){ping_recv} },
     {ISN_PROTO_LISTEND, NULL}
 };
@@ -124,11 +128,19 @@ int main(void)
 
     /* Second IDM Device over Frame Layer */
     isn_msg_init(&isn_message2, isn_msg_table2, SIZEOF(isn_msg_table2), &isn_frame);
+#ifdef TELNET
+    isn_frame_init(&isn_frame, ISN_FRAME_MODE_SHORT, &isn_message2, NULL, &isn_user, &counter_1kHz, 100 /*ms*/);
+#else
     isn_frame_init(&isn_frame, ISN_FRAME_MODE_SHORT, &isn_message2, NULL, &isn_usbfs, &counter_1kHz, 100 /*ms*/);
+#endif
 
     /* We set a loopback driver (echo) whatever we receive on user (telnet) port we return back */
+#ifdef TELNET
+    isn_user_init(&isn_user, &isn_frame, &isn_usbfs, ISN_PROTO_USER1);
+#else
     isn_loopback_init(&isn_loopback, &isn_user);
     isn_user_init(&isn_user, &isn_loopback, &isn_usbfs, ISN_PROTO_USER1);
+#endif
 
     /* Main dispatch from the USBFS */
     isn_dispatch_init(&isn_dispatch, isn_bindings);
@@ -140,9 +152,11 @@ int main(void)
         if (isn_usbfs_poll(&isn_usbfs) > 0) {
             rxidle = 0;
         }
+#ifndef TELNET
         if (rxidle < 5000/*ms*/) {
             userstream_generate();
         }
+#endif
         if ( !isn_msg_sched(&isn_message) && !isn_msg_sched(&isn_message2) ) {
             asm volatile("wfi");
         }
