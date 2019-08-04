@@ -1,6 +1,9 @@
 /** \file
  *  \author Uros Platise <uros@isotel.eu>
  *  \see isn_dispatch.h
+ * 
+ * \cond Implementation
+ * \addtogroup GR_ISN_Dispatch
  */
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -11,6 +14,8 @@
  */
 
 #include "isn_dispatch.h"
+
+/**\{ */
 
 static const void * isn_dispatch_recv(isn_layer_t *drv, const void *buf, size_t size, isn_driver_t *caller) {
     isn_dispatch_t *obj = (isn_dispatch_t *)drv;
@@ -37,3 +42,5 @@ void isn_dispatch_init(isn_dispatch_t *obj, isn_bindings_t* childs) {
     obj->drv.recv = isn_dispatch_recv;
     obj->childs   = childs;
 }
+
+/** \} \endcond */

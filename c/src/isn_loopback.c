@@ -1,6 +1,9 @@
 /** \file
  *  \author Uros Platise <uros@isotel.eu>
  *  \see isn_loopback.h
+ * 
+ * \cond Implementation
+ * \addtogroup GR_ISN_Loopback
  */
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -12,6 +15,8 @@
 
 #include <string.h>
 #include "isn_loopback.h"
+
+/**\{ */
 
 static const void* isn_loopback_recv(isn_layer_t *drv, const void *src, size_t size, isn_driver_t *caller) {
     isn_loopback_t *obj = (isn_loopback_t *)drv;
@@ -30,3 +35,5 @@ void isn_loopback_init(isn_loopback_t *obj, isn_layer_t* target) {
     obj->drv.recv = isn_loopback_recv;
     obj->target   = target;
 }
+
+/** \} \endcond */

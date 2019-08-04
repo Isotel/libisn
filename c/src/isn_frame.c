@@ -1,6 +1,9 @@
 /** \file
  *  \author Uros Platise <uros@isotel.eu>
  *  \see isn_frame.h
+ * 
+ * \cond Implementation
+ * \addtogroup GR_ISN_Frame
  */
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -11,6 +14,8 @@
  */
 
 #include "isn_frame.h"
+
+/**\{ */
 
 #define SNCF_CRC8_POLYNOMIAL    ((uint8_t) 0x4D)    // best polynom for data sizes up to 64 bytes
 
@@ -77,6 +82,9 @@ static const void * isn_frame_recv(isn_layer_t *drv, const void *src, size_t siz
 
     if ((*(obj->sys_counter) - obj->last_ts) > obj->frame_timeout) {
         obj->state = IS_NONE;
+        if (obj->recv_len) {
+            obj->rx_errors++;
+        }
         obj->recv_size = obj->recv_len = 0;
     }
     obj->last_ts = *(obj->sys_counter);
@@ -104,6 +112,10 @@ static const void * isn_frame_recv(isn_layer_t *drv, const void *src, size_t siz
                 if (obj->recv_size == obj->recv_len && obj->crc_enabled) {
                     if (*buf == obj->crc) {
                         obj->child->recv(obj->child, obj->recv_buf, obj->recv_size, drv);
+                        obj->rx_frames++;
+                    }
+                    else {
+                        obj->rx_errors++;
                     }
                     obj->recv_size = obj->recv_len = 0;
                     obj->state = IS_NONE;
@@ -117,6 +129,7 @@ static const void * isn_frame_recv(isn_layer_t *drv, const void *src, size_t siz
                         obj->child->recv(obj->child, obj->recv_buf, obj->recv_size, drv);
                         obj->recv_size = obj->recv_len = 0;
                         obj->state = IS_NONE;
+                        obj->rx_frames++;
                     }
                 }
                 break;
@@ -151,5 +164,9 @@ void isn_frame_init(isn_frame_t *obj, isn_frame_mode_t mode, isn_layer_t* child,
     obj->state            = IS_NONE;
     obj->recv_size        = 0;
     obj->recv_len         = 0;
+    obj->rx_frames        = 0;
+    obj->rx_errors        = 0;
     obj->last_ts          = 0;
 }
+
+/** \} \endcond */

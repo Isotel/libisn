@@ -1,5 +1,27 @@
 /** \file
  *  \author Uros Platise <uros@isotel.eu>
+ *  \see isn_usbuart.c
+ * 
+ * \defgroup GR_ISN_PSoC_USBUART ISN Driver for PSoC USBUART
+ * 
+ * # Scope
+ * 
+ * ISN Device Driver for the Cypress PSoC4, PSoC5 USBUART.
+ * 
+ * # Usage
+ * 
+ * Place USBUART component in the PSoC Creator 4.2 and name it USBUART.
+ * 
+ * ~~~
+ * isn_dispatch_t isn_dispatch;
+ * isn_frame_t isn_frame;
+ * isn_usbuart_t isn_usbuart;
+ * 
+ * isn_frame_init(&isn_frame, ISN_FRAME_MODE_COMPACT, &isn_dispatch, &(isn_receiver_t){terminal_recv}, &isn_usbuart, &counter_1kHz, 100);
+ * 
+ * CyGlobalIntEnable;
+ * isn_usbuart_init(&isn_usbuart, USBUART_3V_OPERATION, &isn_frame);
+ * ~~~
  */
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public

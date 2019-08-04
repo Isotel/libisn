@@ -1,10 +1,15 @@
 /** \file
  *  \author Uros Platise <uros@isotel.eu>, Tomaz Kanalec <tomaz@isotel.eu>
- *  \see isn_uart.c
+ *  \see isn_uart.h
  * 
- * Tested on:
- *  - Families: PSoC4, PSoC6
+ * \addtogroup GR_ISN_PSoC_UART
+ * 
+ * # Tested
+ * 
+ *  - Families: PSoC4, PSoC5, PSoC6
  *  - Kits: CY8CKIT-062-BLE
+ * 
+ * \cond Implementation
  */
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -17,6 +22,8 @@
 
 #include "project.h"
 #include "PSoC/isn_uart.h"
+
+/**\{ */
 
 #if(CYDEV_CHIP_FAMILY_USED == CYDEV_CHIP_FAMILY_PSOC4)
     #define UART_GetNumInTxFifo()       UART_SpiUartGetTxBufferSize()
@@ -108,3 +115,5 @@ void isn_uart_init(isn_uart_t *obj, isn_layer_t* child) {
 
     UART_Start();
 }
+
+/** \} \endcond */

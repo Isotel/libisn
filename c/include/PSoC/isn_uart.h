@@ -1,5 +1,22 @@
 /** \file
  *  \author Uros Platise <uros@isotel.eu>
+ *  \see isn_uart.c
+ * 
+ * \defgroup GR_ISN_PSoC_UART ISN Driver for PSoC UART
+ * 
+ * # Scope
+ * 
+ * ISN Device Driver for the Cypress PSoC4, PSoC5 and PSoC6 UART and supports
+ * non-blocking and blocking mode.
+ * 
+ * # Usage
+ * 
+ * Place UART component in the PSoC Creator 4.2 and name it UART only.
+ * 
+ * - if the TX buffer is below 64 bytes, device may operate in blocking mode, if
+ *   desired packet cannot fit the hardware fifo,
+ * - otherwise device driver operates in non-blocking mode.
+ * 
  */
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public

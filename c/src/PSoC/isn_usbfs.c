@@ -2,15 +2,22 @@
  *  \author Uros Platise <uros@isotel.eu>, Stanislav <stanislav@isotel.eu>
  *  \see isn_usbfs.h
  * 
+ * \addtogroup GR_ISN_PSoC_USBFS
+ * 
+ * # Tested
+ * 
+ *  - PSoC5 CY8C5888, DeweLab project
+ * 
+ * \cond Implementation
+ * 
+ * # Implementation
+ * 
  * Represents the most simple (tiny) implementation of bulk USB 
  * transfer via one receiving EP 1, and 7 sending EPs with single
  * buffering in C code. It should reach sending speeds up to 400 kB/s.
  * 
  * Speed may be improved by adding additional TX and RX FIFOs, 
  * and by zero-padding technique to fill the entire packet.
- * 
- * Tested on:
- *  - PSoC5 CY8C5888, DeweLab project
  */
 /*
  * (c) Copyright 2019, Isotel, http://isotel.eu
@@ -18,6 +25,8 @@
 
 #include "project.h"
 #include "PSoC/isn_usbfs.h"
+
+/**\{ */
 
 /** OUT EP in USB therminology (EP that receives data from the host) */
 #define USB_RECV_EP     1
@@ -143,3 +152,5 @@ uint8_t USBFS_HandleVendorRqst() {
     }
     return (requestHandled);
 }
+
+/** \} \endcond */

@@ -1,5 +1,31 @@
 /** \file
  *  \author Uros Platise <uros@isotel.eu>
+ *  \see isn_loopback.c
+ * 
+ * \defgroup GR_ISN_Loopback ISN Loopback Driver
+ * 
+ * # Scope
+ * 
+ * Implements the ISN Loopback Driver as a supporting element in building
+ * more complex structures. It is fully transparent to the Protocol Structure, 
+ * does not alter any data.
+ * 
+ * # Concept
+ * 
+ * It is a receiver only object, and loops back the received data to the target object.
+ * 
+ * Example below is a bi-directional bridge and re-framer between the UART and USBFS where:
+ * 
+ * - UART is carrying data packed with the CRC (ISN_FRAME_MODE_COMPACT),
+ * - and USBFS encapsulated the same data into a SHORT FRAME without the CRC (ISN_FRAME_MODE_SHORT).
+ * ~~~
+ * isn_uart_init(&isn_uart, &isn_cframe);
+ * isn_frame_init(&isn_cframe, ISN_FRAME_MODE_COMPACT, &isn_loopback_uartrx, NULL, &isn_uart, &counter_1kHz, 100);
+ * isn_loopback_init(&isn_loopback_uartrx, &isn_sframe);
+ * isn_frame_init(&isn_sframe, ISN_FRAME_MODE_SHORT, &isn_loopback_uarttx, NULL, &isn_usbfs, &counter_1kHz, 100);
+ * isn_loopback_init(&isn_loopback_uarttx, &isn_cframe); 
+ * isn_usbfs_init(&isn_usbfs, USBFS_DWR_POWER_OPERATION, &isn_sframe);
+ * ~~~
  */
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public

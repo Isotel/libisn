@@ -2,54 +2,119 @@
  *  \brief Isotel Sensor Network Message Layer Implementation
  *  \author Uros Platise <uros@isotel.eu>
  *  \see https://www.isotel.eu/isn/message.html
- *  
- * Message Scheduler
  * 
- * 1. Each message is set a priority, lower priority events are sent out first, if two
- *    messages share the priority then lower in number is sent out first.
+ * \defgroup GR_ISN_Message ISN Driver for Message Layer
  * 
- * 2. Before message is sent, message handler is called, which returns pointer to data
- *    to be sent out.
+ * # Scope
  * 
- * 3. Callback is also called when query comes with input data, and pointer to the input
- *    data.
+ * Implements Device side of the [ISN Message Layer Protocol](https://www.isotel.eu/isn/message.html)
+ * with direct mapping of C structures to messages and easy to use callback API.
+ * A message layer creates a virtual device at the external entity that may hold up to 128 
+ * messages, each long of about 128 bytes (64 bytes for description and 64 bytes for variable
+ * arguments). The system may implement numerous Message Layers thus creating more than just
+ * on device at the external entity with the help of other ISN protocol layers.
  * 
+ * Message Layers descriptors can be very powerful and provide:
  * 
- * Process flow
+ * - text elements, sections, basic, advanced, development and hidden sections
+ * - little and big-endian formats with standard and custom bit-lengths
+ * - tabular environment
+ * - enumerations with filters, and push-buttons
+ * - math expressions, with cross-referencing to other variables from other messages
+ * - accuracy support with correlated cross-refs propagation
+ * - severity information to propagate information as info, warning, or error
  * 
- * 1. Program internally updates structures and marks messages for transmissions.
- *    Priority can be defined as lower msgnum first, or round-robin
+ * # Concept
  * 
- * 2. Remote may query for a message(s) which should rise priority to respond timely.
- *    Priority of query messages can still be less than some 'message number' i.e. 1, or 2,
- *    which are used for timely streaming. Queries should have high priorities, since 
- *    slow-response may stall transfers with the IoT.
+ * Each message is represented by a C structure, which needs to be packed (not padded).
+ * For example: for a three colour LED a structure would look like:
  * 
+ * ~~~
+ * typedef struct {
+ *   uint8_t red;
+ *   uint8_t green;
+ *   uint8_t blue;
+ * } __attribute__((packed)) led_t;
+ *
+ * led_t led;
+ * ~~~
  * 
- * Buffering
+ * To interact with the Message layer it needs a callback handler. 
  * 
- * 1. Query receive buffer, must hold message as long it is not handled by the callback.
- *    Note that driver may transmit another message with higher priority. If interface
- *    depends on lower-level protocols, these may include additional buffering.
- * 
- * 2. Transmit buffer, that is controlled by the user's callback, he may or may not copy
- *    it's data to it. I.e. for static parameters under user control this is not necessary.
- * 
- * 
- * Typical Callback Routine
- * 
- * void* callback_handler(void *args)
- * {
- *    if (args) // size of data is already checked by msg driver
- *      process_input_data
- * 
- *    .. prepare output data like take latest measurements ..
- * 
- *    // may copy output data to predefined msg output buffer (since only one is used at a time)
- *    // may return NULL if there is no data available.
- *    p = copy(mydata)
- *    return p;
+ * ~~~
+ * void *led_cb(const void *data) {
+ *   if (data) {
+ *       led = *((const led_t *)data);
+ *       LED_PWM8_R_Write(led.red);
+ *       LED_PWM8_G_Write(led.green);
+ *       LED_PWM8_B_Write(led.blue);
+ *   }
+ *   return &led;
  * }
+ * ~~~
+ * 
+ * It is called in the following three cases:
+ * 
+ * 1. when external entity wants to modify its value, the incoming data is provided by the 
+ *    `data` pointer holding exactly the same structure; A callback should do incoming range
+ *    check to ensure data integrity on critical parameters.
+ * 2. when external entity wants to read the latest state, in which case the `data` is NULL,
+ * 3. and when the device itself wants to send out an update using the isn_msg_send() method, 
+ *    in which case the `data` is also NULL, however a message can be scheduled at different 
+ *    priorities compared to the 2nd case.
+ * 
+ * C type structures and callbacks are bundled together with the message
+ * descriptors in the so-called message table. A minimal table looks like this:
+ * 
+ * ~~~
+ * static isn_msg_table_t isn_msg_table[] = {
+ *   { 0, 0,             NULL,   "%T0{MyCompany FlashLight} {#sno}={12345678}" },
+ *   { 0, sizeof(led_t), led_cb, "LED {:red}={%hu}{:green}={%hu}{:blue}={%hu}" },
+ *   ISN_MSG_DESC_END(0)
+ * };
+ * ~~~
+ * 
+ * where:
+ * 
+ * 1. The first message is a mandatory unique identifier of the device and typically 
+ *    also holds a C structure with a callback handler to read out silicon ID, etc.
+ *    Name should be composed of a vendor - product free string.
+ * 2. The 2nd message is the LED accompanied with the three printf() like descriptions
+ * 3. The 3rd message is the mandatory last terminator message and may in addition
+ *    provide device checksum.
+ * 
+ * The table is then passed to the isn_msg_init(). The parent protocol (`isn_parent_protocol`) 
+ * will act as stimulus from the interface side, and the device itself posts message by 
+ * isn_msg_send() and isn_msg_sendqby() methods. The main loop handles these requests
+ * in the main-loop by calling isn_msg_sched().
+ * ~~~
+ * isn_message_t isn_message;
+ * 
+ * isn_msg_init(&isn_message, isn_msg_table, SIZEOF(isn_msg_table), &isn_parent_protocol);
+ * 
+ * while(1) {
+ *     if ( !isn_msg_sched(&isn_message) ) {
+ *         // All done so we may fall asleep. Low-level ISRs will wake us up
+ *         asm volatile("wfi"); 
+ *     }
+ * }
+ * ~~~
+ * 
+ * and the `isn_parent_protocol` is the parent protocol layer whose child this particular message is.
+ * A device can implement numerous virtual devices (message layers).
+ * 
+ * # Priorities
+ * 
+ * Message layer uses priorities to determine which message to send out first:
+ * 
+ * 1. Internally request for message descriptors is given the highest priority.
+ *    It ensures that external entity can retrieve message structure even when 
+ *    it is flooded with the data. Defined by the `ISN_MSG_PRI_DESCRIPTION`
+ * 2. The second highest is required for arguments by external entity, given by
+ *    `ISN_MSG_PRI_HIGHEST`
+ * 3. When user posts a message to be sent out with the isn_msg_send() method
+ *    it should specify the priority from `ISN_MSG_PRI_LOW` to `ISN_MSG_PRI_HIGHEST`
+ *    preferably by using macros.
  */
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public

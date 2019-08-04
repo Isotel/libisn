@@ -1,5 +1,21 @@
 /** \file
  *  \author Uros Platise <uros@isotel.eu>
+ *  \see isn_usbfs.h
+ * 
+ * \defgroup GR_ISN_PSoC_USBFS ISN Driver for PSoC USBFS
+ * 
+ * # Scope
+ * 
+ * ISN Bulk Device Driver for the Cypress PSoC5 USBFS.
+ * 
+ * # Usage
+ * 
+ * - Place USBFS component in the PSoC Creator 4.2 and name it USBFS.
+ * - Configure the first EP as OUT, and all other 7 as IN.
+ * - Enable call to the external USBFS_HandleVendorRqst()
+ * 
+ * Isotel Precision IDM requires that Ping Protocol is also implemented.
+ * See \ref GR_ISN_Dispatch for example.
  */
 /*
  * (c) Copyright 2019, Isotel, http://isotel.eu

@@ -1,6 +1,47 @@
 /** \file
  *  \author Uros Platise <uros@isotel.eu>
  *  \see isn_dispatch.c
+ * 
+ * \defgroup GR_ISN_Dispatch ISN Dispatcher
+ * 
+ * # Scope
+ * 
+ * Implements the ISN Dispatch Driver as a supporting element in building
+ * more complex structures. It is fully transparent to the Protocol Structure, 
+ * does not alter any data.
+ * 
+ * # Concept
+ * 
+ * It is a receiver only object, and dispatches the incoming data
+ * based on a list of provided children objects given by isn_bindings_t.
+ * 
+ * List must be terminated either by:
+ * 
+ * - `ISN_PROTO_LISTEND`, or
+ * - `ISN_PROTO_OTHER` with a valid receiver, which would also receive data if none of the previously
+ *   matched protocols on the list matches.
+ * 
+ * Dispatcher can only work properly after data is properly formatted, means, that
+ * the first byte in the packet provides the next protocol ID. 
+ * Typically it is a child of \ref GR_ISN_Frame, \ref GR_ISN_USBFS, UDP Layer and others.
+ * 
+ * An example of usage, dispatching information among:
+ * 
+ * - proprietary User protocol 1 receiving D/A, stream, 
+ * - Message layer for device configuration, and 
+ * - Ping - keep alive receiver
+ * 
+ * ~~~
+ * static isn_bindings_t isn_bindings[] = {
+ *    {ISN_PROTO_USER1, &isn_user},
+ *    {ISN_PROTO_MSG, &isn_message},
+*     {ISN_PROTO_PING, &(isn_receiver_t){ping_recv} },
+ *    {ISN_PROTO_LISTEND, NULL}
+ * };
+ * 
+ * isn_dispatch_init(&isn_dispatch, isn_bindings);
+ * isn_usbfs_init(&isn_usbfs, USBFS_DWR_POWER_OPERATION, &isn_dispatch);
+ * ~~~
  */
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public

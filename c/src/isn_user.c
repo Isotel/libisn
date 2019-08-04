@@ -1,6 +1,9 @@
 /** \file
  *  \author Uros Platise <uros@isotel.eu>
  *  \see isn_user.h
+ * 
+ * \cond Implementation
+ * \addtogroup GR_ISN_User
  */
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -11,6 +14,8 @@
  */
 
 #include "isn_user.h"
+
+/**\{ */
 
 static int isn_user_getsendbuf(isn_layer_t *drv, void **dest, size_t size) {
     isn_user_t *obj = (isn_user_t *)drv;
@@ -53,3 +58,5 @@ void isn_user_init(isn_user_t *obj, isn_layer_t* child, isn_layer_t* parent, uin
     obj->child          = child;
     obj->parent         = parent;
 }
+
+/** \} \endcond */

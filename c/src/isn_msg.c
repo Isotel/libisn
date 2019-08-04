@@ -1,6 +1,9 @@
 /** \file
  *  \author Uros Platise <uros@isotel.eu>
  *  \see isn_msg.h
+ * 
+ * \cond Implementation
+ * \addtogroup GR_ISN_Message
  */
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -14,6 +17,8 @@
 #include <string.h>
 #include "assert.h"
 #include "isn_msg.h"
+
+/**\{ */
 
 static void send_packet(isn_message_t *obj, uint8_t msgflags, const void* data, isn_msg_size_t size) {
     void *dest = NULL;
@@ -169,3 +174,5 @@ void isn_msg_init(isn_message_t *obj, isn_msg_table_t* messages, uint8_t size, i
     obj->pending = 1;
     obj->msgnum = 0;
 }
+
+/** \} \endcond */

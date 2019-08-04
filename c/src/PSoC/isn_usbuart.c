@@ -2,8 +2,13 @@
  *  \author Uros Platise <uros@isotel.eu>
  *  \see isn_usbuart.h
  * 
- * Tested on:
+ * \addtogroup GR_ISN_PSoC_USBUART
+ * 
+ * # Tested
+ *
  *  - Families: PSoC4, PSoC5
+ * 
+ * \cond Implementation
  */
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -15,6 +20,8 @@
 
 #include "project.h"
 #include "PSoC/isn_usbuart.h"
+
+/**\{ */
 
 /**
  * Allocate buffer if buf is given, or just query for availability if buf is NULL
@@ -74,3 +81,5 @@ void isn_usbuart_init(isn_usbuart_t *obj, int mode, isn_layer_t* child) {
     while(0 == USBUART_GetConfiguration());
     USBUART_CDC_Init();
 }
+
+/** \} \endcond */
