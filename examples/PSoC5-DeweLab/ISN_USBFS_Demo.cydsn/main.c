@@ -129,7 +129,7 @@ int main(void)
     /* Second IDM Device over Frame Layer */
     isn_msg_init(&isn_message2, isn_msg_table2, SIZEOF(isn_msg_table2), &isn_frame);
 #ifdef TELNET
-    isn_frame_init(&isn_frame, ISN_FRAME_MODE_SHORT, &isn_message2, NULL, &isn_user, &counter_1kHz, 100 /*ms*/);
+    isn_frame_init(&isn_frame, ISN_FRAME_MODE_SHORT, &isn_message2, &(isn_receiver_t){ping_recv}, &isn_user, &counter_1kHz, 100 /*ms*/);
 #else
     isn_frame_init(&isn_frame, ISN_FRAME_MODE_SHORT, &isn_message2, NULL, &isn_usbfs, &counter_1kHz, 100 /*ms*/);
 #endif

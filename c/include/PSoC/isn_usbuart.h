@@ -6,7 +6,7 @@
  * 
  * # Scope
  * 
- * ISN Device Driver for the Cypress PSoC4, PSoC5 USBUART.
+ * Tiny implementation of the ISN Device Driver for the Cypress PSoC4, PSoC5 USBUART.
  * 
  * # Usage
  * 

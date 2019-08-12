@@ -196,7 +196,15 @@
 #define ISN_PROTO_TRANS     0x7E
 #define ISN_PROTO_TRANL     0x7D
 
-#define ISN_PROTO_USERMAX   ISN_PROTO_USER7
+#define ISN_PROTO_USERMAX   ISN_PROTO_USER15
+#define ISN_PROTO_USER15    0x0f
+#define ISN_PROTO_USER14    0x0e
+#define ISN_PROTO_USER13    0x0d
+#define ISN_PROTO_USER12    0x0c
+#define ISN_PROTO_USER11    0x0b
+#define ISN_PROTO_USER10    0x0a
+#define ISN_PROTO_USER9     0x09
+#define ISN_PROTO_USER8     0x08
 #define ISN_PROTO_USER7     0x07
 #define ISN_PROTO_USER6     0x06
 #define ISN_PROTO_USER5     0x05
