@@ -98,8 +98,13 @@ void userstream_generate() {
 /*----------------------------------------------------------*/
 
 const void * ping_recv(isn_layer_t *drv, const void *src, size_t size, isn_driver_t *caller) {
-    isn_msg_send(&isn_message, 1,1);
-    isn_msg_send(&isn_message2, 1,1);
+    assert(src);
+    assert(size > 0);
+
+    if ( *(uint8_t *)src == ISN_PROTO_PING) {
+        isn_msg_send(&isn_message, 1,1);
+        isn_msg_send(&isn_message2, 1,1);
+    }
     return src;
 }
 
