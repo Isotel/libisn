@@ -98,8 +98,13 @@ void userstream_generate() {
 /*----------------------------------------------------------*/
 
 const void * ping_recv(isn_layer_t *drv, const void *src, size_t size, isn_driver_t *caller) {
-    isn_msg_send(&isn_message, 1,1);
-    isn_msg_send(&isn_message2, 1,1);
+    assert(src);
+    assert(size > 0);
+
+    if ( *(uint8_t *)src == ISN_PROTO_PING) {
+        isn_msg_send(&isn_message, 1,1);
+        isn_msg_send(&isn_message2, 1,1);
+    }
     return src;
 }
 
@@ -129,7 +134,7 @@ int main(void)
     /* Second IDM Device over Frame Layer */
     isn_msg_init(&isn_message2, isn_msg_table2, SIZEOF(isn_msg_table2), &isn_frame);
 #ifdef TELNET
-    isn_frame_init(&isn_frame, ISN_FRAME_MODE_SHORT, &isn_message2, NULL, &isn_user, &counter_1kHz, 100 /*ms*/);
+    isn_frame_init(&isn_frame, ISN_FRAME_MODE_SHORT, &isn_message2, &(isn_receiver_t){ping_recv}, &isn_user, &counter_1kHz, 100 /*ms*/);
 #else
     isn_frame_init(&isn_frame, ISN_FRAME_MODE_SHORT, &isn_message2, NULL, &isn_usbfs, &counter_1kHz, 100 /*ms*/);
 #endif

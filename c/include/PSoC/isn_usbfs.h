@@ -6,7 +6,7 @@
  * 
  * # Scope
  * 
- * ISN Bulk Device Driver for the Cypress PSoC5 USBFS.
+ * Tiny implementation of the ISN Bulk Device Driver for the Cypress PSoC5 USBFS.
  * 
  * # Usage
  * 

@@ -6,8 +6,8 @@
  * 
  * # Scope
  * 
- * ISN Device Driver for the Cypress PSoC4, PSoC5 and PSoC6 UART and supports
- * non-blocking and blocking mode.
+ * Tiny implementation of the ISN Device Driver for the 
+ * Cypress PSoC4, PSoC5 and PSoC6 UART and supports non-blocking and blocking mode.
  * 
  * # Usage
  * 

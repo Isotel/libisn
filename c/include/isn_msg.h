@@ -17,11 +17,12 @@
  * Message Layers descriptors can be very powerful and provide:
  * 
  * - text elements, sections, basic, advanced, development and hidden sections
- * - little and big-endian formats with standard and custom bit-lengths
- * - tabular environment
- * - enumerations with filters, and push-buttons
+ * - data structures and parameter - value like expressions
+ * - tabular (vertical and horizontal table) representation
+ * - arguments of little and big-endian formats of standard and custom bit-lengths
  * - math expressions, with cross-referencing to other variables from other messages
  * - accuracy support with correlated cross-refs propagation
+ * - enumerations with filters, and push-buttons
  * - severity information to propagate information as info, warning, or error
  * 
  * # Concept
