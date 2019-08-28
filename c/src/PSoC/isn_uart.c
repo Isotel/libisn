@@ -50,6 +50,10 @@
     }
 #endif
 
+#if(CYDEV_CHIP_FAMILY_USED == CYDEV_CHIP_FAMILY_PSOC6)
+#define UART_TX_BUFFER_SIZE     128
+#endif
+
 static int UART_TX_is_ready(size_t size) {
 #if (UART_TX_BUFFER_SIZE >= 64)
     return ((UART_TX_BUFFER_SIZE - UART_GetNumInTxFifo()) > size) ? 1 : 0;
