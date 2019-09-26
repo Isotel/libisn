@@ -99,7 +99,7 @@ void isn_msg_send(isn_message_t *obj, uint8_t message_id, uint8_t priority) {
 
 
 uint8_t isn_msg_sendqby(isn_message_t *obj, isn_events_handler_t hnd, uint8_t priority, uint8_t msgnum) {
-	for (msgnum = 0; msgnum < obj->isn_msg_table_size; msgnum++) {
+	for (; msgnum < obj->isn_msg_table_size; msgnum++) {
         if (obj->isn_msg_table[msgnum].handler == hnd) {
             isn_msg_send(obj, msgnum, priority);
             return msgnum;
