@@ -21,8 +21,12 @@ Suggested reading:
 - \ref GR_ISN_Dispatch
 - \ref GR_ISN_Loopback
 
+POSIX Support:
+
+- \ref GR_ISN_UDP
+
 Cypress PSoC Support:
 
- - \ref GR_ISN_PSoC_UART standard PHY
- - \ref GR_ISN_PSoC_USBUART standard USB com port driver
- - \ref GR_ISN_PSoC_USBFS advanced driver
+- \ref GR_ISN_PSoC_UART standard PHY
+- \ref GR_ISN_PSoC_USBUART standard USB com port driver
+- \ref GR_ISN_PSoC_USBFS advanced driver

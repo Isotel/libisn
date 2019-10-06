@@ -291,4 +291,14 @@ typedef void* (* isn_events_handler_t)(const void* arg);
 #define LAMBDA(c_)      ({ c_ _;})
 #define assert2(x)      (void)(x)
 
+#ifndef UNUSED
+#if defined(__GNUC__)
+# define UNUSED(x) UNUSED_ ## x __attribute__((unused))
+#elif defined(__LCLINT__)
+# define UNUSED(x) /*@unused@*/ x
+#else
+# define UNUSED(x) x
+#endif
+#endif
+
 #endif
