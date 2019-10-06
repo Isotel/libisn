@@ -156,10 +156,6 @@ const void * ping_recv(isn_layer_t *drv, const void *src, size_t size, isn_drive
     return src;
 }
 
-/*--------------------------------------------------------------------*/
-/* Main                                                               */
-/*--------------------------------------------------------------------*/
-
 static isn_msg_table_t isn_msg_table[] = {
     { 0, sizeof(uint64_t), serial_cb, "%T0{SiriusXHS} V1.0 {#sno}={%<Lx}" },
     /*1*/
@@ -182,6 +178,10 @@ static isn_bindings_t isn_bindings[] = {
     {ISN_PROTO_PING, &(isn_receiver_t){ping_recv} },
     {ISN_PROTO_LISTEND, NULL}
 };
+
+/*--------------------------------------------------------------------*/
+/* Main                                                               */
+/*--------------------------------------------------------------------*/
 
 static void usage(const char *prog) {
     fprintf(stdout, "usage: %s [-p port]\n", prog);

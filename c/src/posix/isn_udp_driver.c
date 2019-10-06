@@ -92,7 +92,7 @@ static void udp_clients_insert(udp_clients_t *cls, time_ms_t tm,
             uc->last_access = tm;
             memcpy(&uc->s_addr, sa, sa_len);
             ++cls->active_clients;
-            LOG_INFO(isn_logger_level, "isn_udp: client connected %s:%d", inet_ntoa(((struct sockaddr_in *)sa)->sin_addr),
+            LOG_INFO(isn_logger_level, "client connected %s:%d", inet_ntoa(((struct sockaddr_in *)sa)->sin_addr),
                 ((struct sockaddr_in *)sa)->sin_port);
             break;
         }
@@ -100,7 +100,7 @@ static void udp_clients_insert(udp_clients_t *cls, time_ms_t tm,
 }
 
 static void udp_client_remove(udp_clients_t *cls, udp_client_t *uc) {
-    LOG_INFO(isn_logger_level, "isn_udp: client disconnected %s",
+    LOG_INFO(isn_logger_level, "client disconnected %s",
              inet_ntoa(((struct sockaddr_in *) &uc->s_addr)->sin_addr))
     uc->s_addr_len = 0;
     --cls->active_clients;
@@ -194,7 +194,7 @@ static int isn_udp_driver_init(isn_udp_driver_t *driver, uint16_t port, isn_laye
         return -EINVAL;
     }
 
-    LOG_INFO(isn_logger_level, "isn_udp: starting udp driver, port: %u, maximum clients: %zu",
+    LOG_INFO(isn_logger_level, "starting udp driver, port: %u, maximum clients: %zu",
             port, sizeof(driver->clients.clients) / sizeof(driver->clients.clients[0]))
 
     driver->sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);

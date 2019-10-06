@@ -34,8 +34,9 @@ static void *serial_cb(const void *data) {
     if (data) {
         serial = *(const uint64_t *)data;
         printf("Received serial: %lx\n", serial);
+        return NULL;    // we do not return values as we ask the peer for it
     }
-    return NULL;    // we do not return values as we ask the peer for it
+    return &serial;
 }
 
 static void *counter_cb(const void *data) {
@@ -43,8 +44,9 @@ static void *counter_cb(const void *data) {
     if (data) {
         counter = *(const counter_t *)data;
         printf("Received counter: %x\n", counter.x);
+        return NULL;
     }
-    return NULL;
+    return &counter;
 }
 
 // Triggers every second by IDM unless this device is sending other data
@@ -52,10 +54,6 @@ const void * ping_recv(isn_layer_t *drv, const void *src, size_t size, isn_drive
     isn_msg_sendby(&isn_message, counter_cb, ISN_MSG_PRI_NORMAL);
     return src;
 }
-
-/*--------------------------------------------------------------------*/
-/* Main                                                               */
-/*--------------------------------------------------------------------*/
 
 static isn_msg_table_t isn_msg_table[] = {
     { 0, sizeof(uint64_t),  serial_cb,  "%T0{UDP Example} V1.0 {#sno}={%<Lx}" },
@@ -68,6 +66,10 @@ static isn_bindings_t isn_bindings[] = {
     {ISN_PROTO_PING, &(isn_receiver_t){ping_recv} },
     {ISN_PROTO_LISTEND, NULL}
 };
+
+/*--------------------------------------------------------------------*/
+/* Main                                                               */
+/*--------------------------------------------------------------------*/
 
 #ifdef __CLION_IDE__
 #  pragma clang diagnostic push
