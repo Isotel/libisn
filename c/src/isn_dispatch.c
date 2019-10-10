@@ -1,4 +1,5 @@
 /** \file
+ *  \brief ISN Protocol Receiver Dispatcher Implementation
  *  \author Uros Platise <uros@isotel.eu>
  *  \see isn_dispatch.h
  * 

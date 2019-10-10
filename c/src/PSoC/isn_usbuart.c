@@ -1,4 +1,5 @@
 /** \file
+ *  \brief ISN USBUART Driver for PSoC4 and PSoC5 Implementation
  *  \author Uros Platise <uros@isotel.eu>
  *  \see isn_usbuart.h
  * 

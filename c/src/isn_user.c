@@ -1,4 +1,5 @@
 /** \file
+ *  \brief ISN User (Custom) Protocol Layer Implementation
  *  \author Uros Platise <uros@isotel.eu>
  *  \see isn_user.h
  * 

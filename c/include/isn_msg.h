@@ -1,5 +1,5 @@
 /** \file
- *  \brief Isotel Sensor Network Message Layer Implementation
+ *  \brief ISN Message Layer
  *  \author Uros Platise <uros@isotel.eu>
  *  \see https://www.isotel.eu/isn/message.html
  *

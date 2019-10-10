@@ -1,5 +1,5 @@
 /** \file
- *  \brief Isotel Sensor Network UDP Driver Implementation
+ *  \brief ISN UDP Driver Implementation
  *  \author Stanislav <stanislav@isotel.eu>, 
  *          Uros Platise <uros@isotel.eu>
  *  \see isn_udp_driver.h

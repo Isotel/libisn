@@ -1,4 +1,5 @@
 /** \file
+ *  \brief ISN User (Custom) Protocol Layer
  *  \author Uros Platise <uros@isotel.eu>
  *  \see https://www.isotel.eu/isn/user.html
  * 

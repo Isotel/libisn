@@ -1,4 +1,5 @@
 /** \file
+ *  \brief ISN USBFS Bulk USB Driver for PSoC4 and PSoC5 Implementation
  *  \author Uros Platise <uros@isotel.eu>, Stanislav <stanislav@isotel.eu>
  *  \see isn_usbfs.h
  * 

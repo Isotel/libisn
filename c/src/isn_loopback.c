@@ -1,4 +1,5 @@
 /** \file
+ *  \brief ISN Loopback Driver Implementation
  *  \author Uros Platise <uros@isotel.eu>
  *  \see isn_loopback.h
  * 

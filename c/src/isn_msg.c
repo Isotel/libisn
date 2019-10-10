@@ -1,4 +1,5 @@
 /** \file
+ *  \brief ISN Message Layer Implementation
  *  \author Uros Platise <uros@isotel.eu>
  *  \see isn_msg.h
  *

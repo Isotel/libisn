@@ -1,5 +1,5 @@
 /** \file
- *  \brief Isotel Sensor Network Logger
+ *  \brief ISN Logger - Reporting / Tracing
  */
 #ifndef ISN_LOGGER_H
 #define ISN_LOGGER_H

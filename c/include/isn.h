@@ -1,4 +1,5 @@
 /** \file
+ *  \brief ISN Protocl Abstract Class
  *  \author Uros Platise <uros@isotel.eu>
  *  \see https://www.isotel.eu/isn
  * 

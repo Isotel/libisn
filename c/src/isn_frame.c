@@ -1,4 +1,5 @@
 /** \file
+ *  \brief ISN Short and Compact (with CRC) Frame Protocol up to 64 B frames Implementation
  *  \author Uros Platise <uros@isotel.eu>
  *  \see isn_frame.h
  * 
