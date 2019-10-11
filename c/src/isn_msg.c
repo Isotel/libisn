@@ -23,16 +23,16 @@
 static void send_packet(isn_message_t *obj, uint8_t msgflags, const void* data, isn_msg_size_t size) {
     void *dest = NULL;
     int xsize = size + 2;
+
     if (obj->parent_driver->getsendbuf(obj->parent_driver, &dest, xsize) == xsize) {
         uint8_t *buf = dest;
         *buf     = ISN_PROTO_MSG;
         *(buf+1) = msgflags;
         memcpy(buf+2, data, size);
         obj->parent_driver->send(obj->parent_driver, buf, xsize);
+        return;
     }
-    else {
-        obj->parent_driver->free(obj->parent_driver, dest);   // we're ok to free NULL to simplify code
-    }
+    obj->parent_driver->free(obj->parent_driver, dest);   // we're ok to free NULL to simplify code
 }
 
 /** Send next message in a round-robin way */
@@ -56,13 +56,15 @@ static int isn_msg_sendnext(isn_message_t *obj) {
             send_packet(obj, (uint8_t)0x80 | obj->msgnum, picked->desc, strlen(picked->desc));
             picked->priority = (obj->msgnum == obj->isn_msg_received_msgnum) ? ISN_MSG_PRI_HIGHEST : ISN_MSG_PRI_LOW;
         }
-        // Note that the message we're asking for is just arriving
-        else if (picked->priority == ISN_MSG_PRI_QUERY_ARGS && obj->msgnum != obj->isn_msg_received_msgnum) {
+        // Note that the message we're asking for is just arriving, and for messages without
+        // any handler, we reply back with query, but we do not block the message.
+        else if (picked->handler == NULL || (picked->priority == ISN_MSG_PRI_QUERY_ARGS && obj->msgnum != obj->isn_msg_received_msgnum)) {
             send_packet(obj, obj->msgnum, NULL, 0);
-            picked->priority = ISN_MSG_PRI_QUERY_WAIT;
+            picked->priority = picked->handler ? ISN_MSG_PRI_QUERY_WAIT : ISN_MSG_PRI_CLEAR;
         }
         else {
             obj->handler_priority = picked->priority;
+            picked->priority = ISN_MSG_PRI_CLEAR;
             if (picked->handler) {
                 obj->handler_msgnum = obj->msgnum;
                 if (obj->msgnum == obj->isn_msg_received_msgnum) {
@@ -76,16 +78,14 @@ static int isn_msg_sendnext(isn_message_t *obj) {
                 }
                 obj->handler_msgnum = -1;
                 if (data == NULL) {
-                    picked->priority = 0;
                     return 1;
                 }
                 // Do not reply back if request for data was done from our side, to avoid ping-ponging
                 // Handle also the case of just-arriving QUERY_ARGS message whch is not yet in _WAIT state.
-                if (picked->priority != ISN_MSG_PRI_QUERY_WAIT && picked->priority != ISN_MSG_PRI_QUERY_ARGS) {
+                if (obj->handler_priority != ISN_MSG_PRI_QUERY_WAIT && obj->handler_priority != ISN_MSG_PRI_QUERY_ARGS) {
                     send_packet(obj, obj->msgnum, data, picked->size);
                 }
             }
-            picked->priority = 0;
         }
         return 1;   // there might be one or more messages to send
     }
@@ -134,7 +134,7 @@ uint8_t isn_msg_sendqby(isn_message_t *obj, isn_events_handler_t hnd, uint8_t pr
 uint8_t isn_msg_resend_queries(isn_message_t *obj) {
     uint8_t count = 0;
 	for (uint8_t msgnum = 0; msgnum < obj->isn_msg_table_size; msgnum++) {
-        if (obj->isn_msg_table[msgnum].priority != ISN_MSG_PRI_QUERY_WAIT) {
+        if (obj->isn_msg_table[msgnum].priority == ISN_MSG_PRI_QUERY_WAIT) {
             obj->isn_msg_table[msgnum].priority = ISN_MSG_PRI_QUERY_ARGS;
             count++;
         }
@@ -156,7 +156,7 @@ static const void * isn_message_recv(isn_layer_t *drv, const void *src, size_t s
     uint8_t msgnum = buf[1] & 0x7F;
 
     if (*buf != ISN_PROTO_MSG) return NULL;
-
+#define FASTLOAD_BUG
 #ifndef FASTLOAD_BUG
     if (msgnum == ISN_MSG_NUM_LAST) {    // speed up loading and mark all mesages to be send out
         for (int i=ISN_MSG_NUM_ID+1; i<(obj->isn_msg_table_size-1); i++) {
@@ -178,6 +178,7 @@ static const void * isn_message_recv(isn_layer_t *drv, const void *src, size_t s
         obj->isn_msg_received_msgnum = msgnum;
     }
     isn_msg_post(obj, msgnum, (uint8_t) (buf[1] & 0x80 ? ISN_MSG_PRI_DESCRIPTION : ISN_MSG_PRI_HIGHEST));
+    obj->msgnum = msgnum;   // speed-up response time to all incoming request and to release incoming buffer
     return buf;
 }
 
