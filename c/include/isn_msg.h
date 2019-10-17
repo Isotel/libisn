@@ -91,7 +91,7 @@
  * ~~~
  * isn_message_t isn_message;
  *
- * isn_msg_init(&isn_message, isn_msg_table, SIZEOF(isn_msg_table), &isn_parent_protocol);
+ * isn_msg_init(&isn_message, isn_msg_table, ARRAY_SIZE(isn_msg_table), &isn_parent_protocol);
  *
  * while(1) {
  *     if ( !isn_msg_sched(&isn_message) ) {
