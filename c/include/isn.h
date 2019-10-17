@@ -288,7 +288,10 @@ typedef void* (* isn_events_handler_t)(const void* arg);
 /**\} */
 
 /* Helpers */
-#define SIZEOF(x)       (sizeof (x) / sizeof (*x))
+#ifdef ARRAY_SIZE
+# error "ARRAY_SIZE already defined"
+#endif
+#define ARRAY_SIZE(x)   (sizeof (x) / sizeof (*x))
 #define LAMBDA(c_)      ({ c_ _;})
 #define assert2(x)      (void)(x)
 

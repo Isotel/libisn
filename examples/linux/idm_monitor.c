@@ -224,7 +224,7 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
     isn_dispatch_init(&isn_dispatch, isn_bindings);
-    isn_msg_init(&isn_message, isn_msg_table, SIZEOF(isn_msg_table), isn_udp_driver);
+    isn_msg_init(&isn_message, isn_msg_table, ARRAY_SIZE(isn_msg_table), isn_udp_driver);
 
     while(1) {
         isn_udp_driver_poll(isn_udp_driver, 
