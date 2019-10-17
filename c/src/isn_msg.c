@@ -156,13 +156,14 @@ static const void * isn_message_recv(isn_layer_t *drv, const void *src, size_t s
     uint8_t msgnum = buf[1] & 0x7F;
 
     if (*buf != ISN_PROTO_MSG) return NULL;
-#define FASTLOAD_BUG
+#if 0 // Code temporarily removed until loading specifications are 100% cleared
 #ifndef FASTLOAD_BUG
     if (msgnum == ISN_MSG_NUM_LAST) {    // speed up loading and mark all mesages to be send out
         for (int i=ISN_MSG_NUM_ID+1; i<(obj->isn_msg_table_size-1); i++) {
             isn_msg_post(obj, i, buf[1] & 0x80 ? ISN_MSG_PRI_DESCRIPTIONLOW : ISN_MSG_PRI_LOW);
         }
     }
+#endif
 #endif
     if (msgnum >= obj->isn_msg_table_size) { // IDM asks for the last possible, indicating it doesn't know the device, so discard input buf
         msgnum = obj->isn_msg_table_size - 1;
