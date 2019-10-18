@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
     }
 
     isn_udp_driver_setlogging(ISN_LOGGER_LOG_LEVEL_DEBUG);
-    isn_udp_driver_t *isn_udp_driver = isn_udp_driver_create(serverport, &isn_dispatch);
+    isn_udp_driver_t *isn_udp_driver = isn_udp_driver_create(serverport, &isn_dispatch, 1);
     if (!isn_udp_driver) {
         fprintf(stderr, "unable to initialize UDP driver: %s, exiting\n", strerror(-errno));
         exit(1);
@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
 
     // add client and send at least one, the first message, to establish connection
     // Number of other clients may in addition connect to this udp server to the given port
-    isn_udp_driver_addclient(isn_udp_driver, "localhost", "31005");
+    isn_udp_driver_addclient(isn_udp_driver, "255.255.255.255", "33005");
     isn_msg_sendby(&isn_message, counter_cb, ISN_MSG_PRI_NORMAL);
 
     while(1) {

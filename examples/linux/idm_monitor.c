@@ -218,7 +218,7 @@ int main(int argc, char *argv[]) {
     setup_tmp100(&tmp100_fpga);
     setup_tmp100(&tmp100_board);
 
-    isn_udp_driver_t *isn_udp_driver = isn_udp_driver_create(port, &isn_dispatch);
+    isn_udp_driver_t *isn_udp_driver = isn_udp_driver_create(port, &isn_dispatch, 1);
     if (!isn_udp_driver) {
         fprintf(stderr, "unable to initialize UDP driver: %s, exiting\n", strerror(-errno));
         exit(1);

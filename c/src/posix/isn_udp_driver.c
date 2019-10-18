@@ -189,7 +189,7 @@ static int send_buf(isn_layer_t *drv, void *buf, size_t sz) {
     return 0;
 }
 
-static int isn_udp_driver_init(isn_udp_driver_t *driver, uint16_t port, isn_layer_t *child) {
+static int isn_udp_driver_init(isn_udp_driver_t *driver, uint16_t port, isn_layer_t *child, int broadcast) {
     if (wsa_startup() != 0) {
         return -EINVAL;
     }
@@ -207,7 +207,8 @@ static int isn_udp_driver_init(isn_udp_driver_t *driver, uint16_t port, isn_laye
     s_addr.sin_family = AF_INET;
     s_addr.sin_port = htons(port);
 
-    if (setsockopt(driver->sock, SOL_SOCKET, SO_REUSEADDR, (const char *) &(int) { 1 }, sizeof(int)) == -1) {
+    if (setsockopt(driver->sock, SOL_SOCKET, SO_REUSEADDR, (const char *) &(int) { 1 }, sizeof(int)) == -1 ||
+        setsockopt(driver->sock, SOL_SOCKET, SO_BROADCAST, (const char *) &broadcast, sizeof(broadcast)) == -1) {
         return -errno;
     }
     if (bind(driver->sock, (struct sockaddr *) (&s_addr), sizeof(struct sockaddr_in)) == -1) {
@@ -243,10 +244,10 @@ int isn_udp_driver_addclient(isn_udp_driver_t *driver, const char *hostname, con
     return err;
 }
 
-isn_udp_driver_t *isn_udp_driver_create(uint16_t serverport, isn_layer_t *child) {
+isn_udp_driver_t *isn_udp_driver_create(uint16_t serverport, isn_layer_t *child, int broadcast) {
     isn_udp_driver_t* driver = malloc(sizeof(isn_udp_driver_t));
     memset(driver, 0, sizeof(*driver));
-    return isn_udp_driver_init(driver, serverport, child) >= 0 ? driver : NULL;
+    return isn_udp_driver_init(driver, serverport, child, broadcast) >= 0 ? driver : NULL;
 }
 
 #ifdef __CLION_IDE__

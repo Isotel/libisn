@@ -41,9 +41,10 @@ typedef int64_t time_ms_t;
  * 
  * \param port listening port, or use 0 for any port
  * \param child binding layer
+ * \param broadcast set to 1 to enable broadcasting to 255.255.255.255 address, otherwise set to 0
  * \returns a valid isn_udp_driver_t instance or NULL or error with errno set.
  */
-isn_udp_driver_t *isn_udp_driver_create(uint16_t serverport, isn_layer_t *child);
+isn_udp_driver_t *isn_udp_driver_create(uint16_t serverport, isn_layer_t *child, int broadcast);
 
 /**
  * Add a new UDP client
