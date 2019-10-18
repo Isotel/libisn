@@ -76,7 +76,7 @@ static isn_bindings_t isn_bindings[] = {
 #  pragma clang diagnostic ignored "-Wmissing-noreturn"
 #endif
 int main(int argc, char *argv[]) {
-    uint16_t serverport = 31000u;
+    uint16_t serverport = ISN_UDP_DEFAULT_SERVERPORT;
     int opt;
     while ((opt = getopt(argc, argv, "hp:")) != -1) {
         switch (opt) {

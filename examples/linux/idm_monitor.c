@@ -192,7 +192,7 @@ static void usage(const char *prog) {
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
 #endif
 int main(int argc, char *argv[]) {
-    uint16_t port = 31000u;
+    uint16_t port = ISN_UDP_DEFAULT_SERVERPORT;
     int opt;
     while ((opt = getopt(argc, argv, "hp:vd")) != -1) {
         switch (opt) {

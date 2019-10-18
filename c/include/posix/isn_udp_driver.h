@@ -33,13 +33,15 @@
 
 #include "isn_logger.h"
 
+#define ISN_UDP_DEFAULT_SERVERPORT  31000 ///< Recommended standard port for single device per IP
+
 typedef struct isn_udp_driver_s isn_udp_driver_t;
 typedef int64_t time_ms_t;
 
 /**
  * Create a new UDP driver instance
  * 
- * \param port listening port, or use 0 for any port
+ * \param serverport listening port, or use 0 for any port, recommended use ISN_UDP_DEFAULT_SERVERPORT
  * \param child binding layer
  * \param broadcast set to 1 to enable broadcasting to 255.255.255.255 address, otherwise set to 0
  * \returns a valid isn_udp_driver_t instance or NULL or error with errno set.
