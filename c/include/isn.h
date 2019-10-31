@@ -81,7 +81,7 @@
  * 
  * ## Buffers
  * 
- * To avoid copying of the information between layers, the isn_driver_s proposes
+ * To avoid copying the data between the layers, the isn_driver_s proposes
  * the following concept:
  * 
  * The last object in the queue (as Message Layer in above example), calls a 
@@ -105,7 +105,7 @@
  * given NULL. In this case buffer will not be allocated by the UART object.
  * 
  * Advantage of this concept is reduced copying and code simplification, which
- * requires that only the top-most parent provides sufficient I/O buffering to 
+ * requires that only the end-points provide sufficient I/O buffering to 
  * satisfy transmission (speed) requirements.
  * 
  * # Protocol Construction

@@ -221,7 +221,7 @@ extern uint8_t handler_priority;
 
 typedef struct {
     /* ISN Abstract Class Driver */
-    isn_driver_t drv;
+    isn_receiver_t drv;
 
     /* Private data */
     isn_driver_t* parent_driver;

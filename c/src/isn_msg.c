@@ -195,10 +195,7 @@ int isn_msg_sched(isn_message_t *obj) {
 
 
 void isn_msg_init(isn_message_t *obj, isn_msg_table_t* messages, uint8_t size, isn_layer_t* parent) {
-    obj->drv.getsendbuf = NULL;
-    obj->drv.send = NULL;
     obj->drv.recv = isn_message_recv;
-    obj->drv.free = NULL;
     obj->parent_driver = parent;
     obj->isn_msg_table = messages;
     obj->isn_msg_table_size = size;
