@@ -57,6 +57,11 @@
 
 #include "isn.h"
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 /*--------------------------------------------------------------------*/
 /* DEFINITIONS                                                        */
 /*--------------------------------------------------------------------*/
@@ -76,7 +81,6 @@ typedef struct {
 }
 isn_bindings_t;
 
-
 typedef struct {
     /* ISN Abstract Class Driver */
     isn_receiver_t drv;
@@ -95,5 +99,9 @@ isn_dispatch_t;
  * \param childs binding layers
  */
 void isn_dispatch_init(isn_dispatch_t *obj, isn_bindings_t* childs);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

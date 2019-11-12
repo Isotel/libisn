@@ -190,6 +190,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**\{ */
 
 #define ISN_PROTO_FRAME     0x80
@@ -303,6 +307,10 @@ typedef void* (* isn_events_handler_t)(const void* arg);
 #else
 # define UNUSED(x) x
 #endif
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif

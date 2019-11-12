@@ -33,6 +33,10 @@
 
 #include "isn_logger.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define ISN_UDP_DEFAULT_SERVERPORT  31000 ///< Recommended standard port for single device per IP
 
 typedef struct isn_udp_driver_s isn_udp_driver_t;
@@ -74,5 +78,9 @@ int isn_udp_driver_poll(isn_udp_driver_t *driver, time_ms_t timeout);
  * Set logger (debugging) level
  */
 void isn_udp_driver_setlogging(isn_logger_level_t level);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //ISN_UDP_DRIVER_H

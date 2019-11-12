@@ -27,7 +27,6 @@
  * (c) Copyright 2019, Isotel, http://isotel.eu
  */
 
-
 #ifndef __ISN_UART_H__
 #define __ISN_UART_H__
 

@@ -41,6 +41,10 @@
 
 #include "isn.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*--------------------------------------------------------------------*/
 /* DEFINITIONS                                                        */
 /*--------------------------------------------------------------------*/
@@ -63,5 +67,9 @@ isn_loopback_t;
  * \param target layer where data received should be copied to
  */
 void isn_loopback_init(isn_loopback_t *obj, isn_layer_t* target);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -22,7 +22,6 @@
  * (c) Copyright 2019, Isotel, http://isotel.eu
  */
 
-
 #ifndef __ISN_USBFS_H__
 #define __ISN_USBFS_H__
 

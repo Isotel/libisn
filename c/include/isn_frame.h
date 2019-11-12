@@ -105,7 +105,9 @@
 
 #include "isn.h"
 
-/**\{ */
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*--------------------------------------------------------------------*/
 /* DEFINITIONS                                                        */
@@ -158,6 +160,8 @@ isn_frame_t;
  */
 void isn_frame_init(isn_frame_t *obj, isn_frame_mode_t mode, isn_layer_t* child, isn_layer_t* other, isn_layer_t* parent, volatile uint32_t *counter, uint32_t timeout);
 
-/**\} */
+#ifdef __cplusplus
+}
+#endif
 
 #endif

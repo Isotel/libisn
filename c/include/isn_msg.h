@@ -174,6 +174,10 @@
 
 #include "isn.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*--------------------------------------------------------------------*/
 /* DEFINITIONS                                                        */
 /*--------------------------------------------------------------------*/
@@ -310,5 +314,9 @@ int isn_msg_isinput_valid(isn_message_t *obj, const void *arg);
  * (HIGHEST) queries and internal ones
  */
 static inline int isn_msg_isquery(isn_message_t *obj) {return obj->handler_priority == ISN_MSG_PRI_HIGHEST;}
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

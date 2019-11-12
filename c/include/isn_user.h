@@ -54,6 +54,10 @@
 
 #include "isn.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*--------------------------------------------------------------------*/
 /* DEFINITIONS                                                        */
 /*--------------------------------------------------------------------*/
@@ -81,5 +85,9 @@ isn_user_t;
  * \param user_id user id from ISN_PROTO_USERx
  */
 void isn_user_init(isn_user_t *obj, isn_layer_t* child, isn_layer_t* parent, uint8_t user_id);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
