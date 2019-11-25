@@ -55,8 +55,8 @@
  * 
  * The UART low-level phy driver is receiving information from its pin UART_RX.
  * However UART information typically does not provide sufficient framing information
- * to clearly denote start and end of a packet (it could with the use of the BREAK signal, 
- * which is unfortunately not widely used and not well supported in hardware).
+ * to clearly mark the start and the end of a packet (however it could with the use 
+ * of the BREAK signal, which is unfortunately not widely used and not well supported in hardware).
  * 
  * To overcome this issue UART object forwards the received data to its child,
  * the low-overhead \ref GR_ISN_Frame layer via the recv() method. It can
@@ -146,9 +146,10 @@
  * However one may notice that the DISPATCH layer is only found in one 
  * direction.
  * A protocol object either provides all of the 4 methods, as are
- * \ref GR_ISN_Frame, \ref GR_ISN_Message, \ref GR_ISN_User and others 
+ * \ref GR_ISN_Frame, \ref GR_ISN_User and others 
  * or it can act just a receiver (isn_receiver_t) providing the isn_driver_s.recv()
- * method only, as are the \ref GR_ISN_Dispatch and \ref GR_ISN_Loopback objects.
+ * method only, as are the \ref GR_ISN_Message, \ref GR_ISN_Dispatch and the
+ * \ref GR_ISN_Loopback objects.
  * 
  * ## The NULL as Ping Protocol
  * 

@@ -129,10 +129,10 @@ int main(void)
     CySysTickSetCallback(0, systick_1kHz);
 
     /* First IDM Device with One Stream Port and dispatch to the Frame Layer for 2nd Device */
-    isn_msg_init(&isn_message, isn_msg_table, SIZEOF(isn_msg_table), &isn_usbfs);
+    isn_msg_init(&isn_message, isn_msg_table, ARRAY_SIZE(isn_msg_table), &isn_usbfs);
 
     /* Second IDM Device over Frame Layer */
-    isn_msg_init(&isn_message2, isn_msg_table2, SIZEOF(isn_msg_table2), &isn_frame);
+    isn_msg_init(&isn_message2, isn_msg_table2, ARRAY_SIZE(isn_msg_table2), &isn_frame);
 #ifdef TELNET
     isn_frame_init(&isn_frame, ISN_FRAME_MODE_SHORT, &isn_message2, &(isn_receiver_t){ping_recv}, &isn_user, &counter_1kHz, 100 /*ms*/);
 #else
