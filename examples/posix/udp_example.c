@@ -7,13 +7,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifndef _MSC_VER
 #include <unistd.h>
+#else
+#include <posix/getopt.h>
+#endif
 
 #include <isn_msg.h>
 #include <isn_dispatch.h>
 #include <posix/isn_udp_driver.h>
 
-#define POLL_TIMEOUT_MS       10
+#define POLL_TIMEOUT_MS       5
 
 isn_message_t isn_message;
 isn_dispatch_t isn_dispatch;
@@ -22,20 +26,24 @@ isn_dispatch_t isn_dispatch;
 /* ISN Messages                                                       */
 /*--------------------------------------------------------------------*/
 
-static uint64_t serial = 0;
+static uint64_t serial = 0x1234567890ABCDEF;
 
+#ifdef _MSC_VER
+#pragma pack(push,1)
+#endif
 typedef struct {
     int32_t x;
-} __attribute__((packed)) counter_t;
+}
+#ifndef _MSC_VER
+__attribute__((packed))
+#else
+#pragma pack(pop)
+#endif
+counter_t;
 
 counter_t counter = {0};
 
-static void *serial_cb(const void *data) {
-    if (data) {
-        serial = *(const uint64_t *)data;
-        printf("Received serial: %lx\n", serial);
-        return NULL;    // we do not return values as we ask the peer for it
-    }
+static void *serial_cb(const void *UNUSED(data)) {
     return &serial;
 }
 
@@ -43,8 +51,6 @@ static void *counter_cb(const void *data) {
     counter.x++;
     if (data) {
         counter = *(const counter_t *)data;
-        printf("Received counter: %x\n", counter.x);
-        return NULL;
     }
     return &counter;
 }
@@ -90,7 +96,7 @@ int main(int argc, char *argv[]) {
     }
 
     isn_udp_driver_setlogging(ISN_LOGGER_LOG_LEVEL_DEBUG);
-    isn_udp_driver_t *isn_udp_driver = isn_udp_driver_create(serverport, &isn_dispatch, 0);
+    isn_udp_driver_t *isn_udp_driver = isn_udp_driver_create(serverport, &isn_dispatch, 1);
     if (!isn_udp_driver) {
         fprintf(stderr, "unable to initialize UDP driver: %s, exiting\n", strerror(-errno));
         exit(1);
@@ -98,22 +104,14 @@ int main(int argc, char *argv[]) {
     isn_dispatch_init(&isn_dispatch, isn_bindings);
     isn_msg_init(&isn_message, isn_msg_table, ARRAY_SIZE(isn_msg_table), isn_udp_driver);
 
-    int active = 0, count = 0;
-    while(1) {
-        int new_active = isn_udp_driver_poll(isn_udp_driver, POLL_TIMEOUT_MS);
-        if (new_active > active) {
-            isn_msg_send(&isn_message, 0, ISN_MSG_PRI_QUERY_ARGS);
-            isn_msg_send(&isn_message, 1, ISN_MSG_PRI_QUERY_ARGS);
-            active = new_active;
-        }
-        if (isn_msg_sched(&isn_message) > 0) count = 0;
+    // add client and send at least one, the first message, to establish connection
+    // Number of other clients may in addition connect to this udp server to the given port
+    isn_udp_driver_addclient(isn_udp_driver, "255.255.255.255", "33005");
+    isn_msg_sendby(&isn_message, counter_cb, ISN_MSG_PRI_NORMAL);
 
-        // Emulate ping and ask for some message
-        if (++count > 110) {
-            isn_msg_send(&isn_message, 1, ISN_MSG_PRI_QUERY_ARGS);
-            printf("Ping\n");
-            count = 0;
-        }
+    while(1) {
+        isn_udp_driver_poll(isn_udp_driver, POLL_TIMEOUT_MS);
+        isn_msg_sched(&isn_message);
     }
 }
 #ifdef __CLION_IDE__
