@@ -7,10 +7,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #ifndef _MSC_VER
 #include <unistd.h>
 #else
+
 #include <posix/getopt.h>
+
 #endif
 
 #include <isn_msg.h>
@@ -29,7 +32,7 @@ isn_dispatch_t isn_dispatch;
 static uint64_t serial = 0x1234567890ABCDEF;
 
 #ifdef _MSC_VER
-#pragma pack(push,1)
+#pragma pack(push, 1)
 #endif
 typedef struct {
     int32_t x;
@@ -39,38 +42,38 @@ __attribute__((packed))
 #else
 #pragma pack(pop)
 #endif
-counter_t;
+    counter_t;
 
-counter_t counter = {0};
+counter_t counter = { 0 };
 
-static void *serial_cb(const void *UNUSED(data)) {
+static void* serial_cb(const void* UNUSED(data)) {
     return &serial;
 }
 
-static void *counter_cb(const void *data) {
+static void* counter_cb(const void* data) {
     counter.x++;
     if (data) {
-        counter = *(const counter_t *)data;
+        counter = *(const counter_t*) data;
     }
     return &counter;
 }
 
 // Triggers every second by IDM unless this device is sending other data
-const void * ping_recv(isn_layer_t *drv, const void *src, size_t size, isn_driver_t *caller) {
+const void* ping_recv(isn_layer_t* drv, const void* src, size_t size, isn_driver_t* caller) {
     isn_msg_sendby(&isn_message, counter_cb, ISN_MSG_PRI_NORMAL);
     return src;
 }
 
 static isn_msg_table_t isn_msg_table[] = {
-    { 0, sizeof(uint64_t),  serial_cb,  "%T0{UDP Example} V1.0 {#sno}={%<Lx}" },
+    { 0, sizeof(uint64_t), serial_cb, "%T0{UDP Example} V1.0 {#sno}={%<Lx}" },
     { 0, sizeof(counter_t), counter_cb, "Example {:counter}={%lu}" },
     ISN_MSG_DESC_END(0)
 };
 
 static isn_bindings_t isn_bindings[] = {
-    {ISN_PROTO_MSG, &isn_message},
-    {ISN_PROTO_PING, &(isn_receiver_t){ping_recv} },
-    {ISN_PROTO_LISTEND, NULL}
+    { ISN_PROTO_MSG,  &isn_message },
+    { ISN_PROTO_PING, &(isn_receiver_t) { ping_recv }},
+    { ISN_PROTO_LISTEND, NULL }
 };
 
 /*--------------------------------------------------------------------*/
@@ -81,7 +84,7 @@ static isn_bindings_t isn_bindings[] = {
 #  pragma clang diagnostic push
 #  pragma clang diagnostic ignored "-Wmissing-noreturn"
 #endif
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
     uint16_t serverport = ISN_UDP_DEFAULT_SERVERPORT;
     int opt;
     while ((opt = getopt(argc, argv, "hp:")) != -1) {
@@ -96,7 +99,7 @@ int main(int argc, char *argv[]) {
     }
 
     isn_udp_driver_setlogging(ISN_LOGGER_LOG_LEVEL_DEBUG);
-    isn_udp_driver_t *isn_udp_driver = isn_udp_driver_create(serverport, &isn_dispatch, 1);
+    isn_udp_driver_t* isn_udp_driver = isn_udp_driver_create(serverport, &isn_dispatch, 1);
     if (!isn_udp_driver) {
         fprintf(stderr, "unable to initialize UDP driver: %s, exiting\n", strerror(-errno));
         exit(1);
@@ -109,7 +112,7 @@ int main(int argc, char *argv[]) {
     isn_udp_driver_addclient(isn_udp_driver, "255.255.255.255", "33005");
     isn_msg_sendby(&isn_message, counter_cb, ISN_MSG_PRI_NORMAL);
 
-    while(1) {
+    while (1) {
         isn_udp_driver_poll(isn_udp_driver, POLL_TIMEOUT_MS);
         isn_msg_sched(&isn_message);
     }
