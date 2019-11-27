@@ -16,7 +16,7 @@
  */
 
 #include <isn.h>
-#include <posix/isn_udp_driver.h>
+#include <posix/isn_udp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

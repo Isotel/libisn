@@ -16,7 +16,7 @@
 
 #include <isn_msg.h>
 #include <isn_dispatch.h>
-#include <posix/isn_udp_driver.h>
+#include <posix/isn_udp.h>
 
 #define POLL_TIMEOUT_QUICK_MS       1
 #define POLL_TIMEOUT_SLEEP_MS       1000
