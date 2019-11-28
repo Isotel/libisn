@@ -4,8 +4,8 @@ set(LIB_ISN_SOURCES
         ${LIB_ISN_SOURCES_DIR}/isn_dispatch.c
         ${LIB_ISN_SOURCES_DIR}/isn_msg.c
         ${LIB_ISN_SOURCES_DIR}/isn_frame.c
-        ${LIB_ISN_SOURCES_DIR}/posix/isn_udp_driver.c
-        ${LIB_ISN_SOURCES_DIR}/posix/isn_serial_driver.c
+        ${LIB_ISN_SOURCES_DIR}/posix/isn_udp.c
+        ${LIB_ISN_SOURCES_DIR}/posix/isn_serial.c
 )
 
 if (MSVC)

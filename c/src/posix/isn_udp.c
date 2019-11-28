@@ -15,8 +15,8 @@
  * (c) Copyright 2019, Isotel, http://isotel.eu
  */
 
-#include <isn_def.h>
-#include <posix/isn_udp_driver.h>
+#include <isn.h>
+#include <posix/isn_udp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

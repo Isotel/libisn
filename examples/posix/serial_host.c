@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
 
 #ifndef _MSC_VER
 #include <unistd.h>
@@ -19,7 +20,7 @@
 #include <isn_dispatch.h>
 #include <isn_msg.h>
 #include <isn_frame.h>
-#include <posix/isn_serial_driver.h>
+#include <posix/isn_serial.h>
 
 #define POLL_TIMEOUT_MS 1000
 
@@ -50,7 +51,7 @@ counter_t counter = { 0 };
 static void* serial_cb(const void* data) {
     if (data) {
         serial = *(const uint64_t*) data;
-        printf("Received serial: %llx\n", serial);
+        printf("Received serial: %" PRIx64 "\n", serial);
         return NULL; // we do not return values as we ask the peer for it
     }
     return &serial;

@@ -4,9 +4,7 @@ LDIR =../lib
 LIBS=
 
 DEPS =
-OBJ = idm_monitor.o ../../c/src/isn_dispatch.o ../../c/src/isn_msg.o ../../c/src/posix/isn_udp_driver.o
-OBJ_EXAMPLE = udp_example.o ../../c/src/isn_dispatch.o ../../c/src/isn_msg.o ../../c/src/posix/isn_udp_driver.o
-OBJ_HOST = udp_host.o ../../c/src/isn_dispatch.o ../../c/src/isn_msg.o ../../c/src/posix/isn_udp_driver.o
+OBJ = idm_monitor.o ../../c/src/isn_dispatch.o ../../c/src/isn_msg.o ../../c/src/posix/isn_udp.o
 
 %.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
