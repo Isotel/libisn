@@ -36,7 +36,7 @@
 #ifndef __ISN_USBUART_H__
 #define __ISN_USBUART_H__
 
-#include "isn.h"
+#include "isn_def.h"
 
 #define TXBUF_SIZE  64
 #define RXBUF_SIZE  64

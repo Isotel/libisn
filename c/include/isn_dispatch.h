@@ -55,7 +55,7 @@
 #ifndef __ISN_DISPATCH_H__
 #define __ISN_DISPATCH_H__
 
-#include "isn.h"
+#include "isn_def.h"
 
 #ifdef __cplusplus
 extern "C"

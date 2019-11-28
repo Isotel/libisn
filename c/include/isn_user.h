@@ -52,7 +52,7 @@
 #ifndef __ISN_USER_H__
 #define __ISN_USER_H__
 
-#include "isn.h"
+#include "isn_def.h"
 
 #ifdef __cplusplus
 extern "C" {

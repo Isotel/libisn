@@ -25,7 +25,7 @@
 #ifndef __ISN_USBFS_H__
 #define __ISN_USBFS_H__
 
-#include "isn.h"
+#include "isn_def.h"
 
 #define USB_BUF_SIZE  64
 

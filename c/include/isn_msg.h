@@ -116,42 +116,42 @@
  * 3. When user posts a message to be sent out with the isn_msg_send() method
  *    it should specify the priority from `ISN_MSG_PRI_LOW` to `ISN_MSG_PRI_HIGHEST`
  *    preferably by using macros.
- * 
+ *
  * # Requesting for data
- * 
+ *
  * Message layer allows to send request to other device for arguments using the
  * isn_msg_send() or isn_msg_sendqby() and providing ISN_MSG_PRI_QUERY_ARGS for
  * priority field. After a request to receive arguments is sent, message is
  * locked into the ISN_MSG_PRI_QUERY_WAIT state in which it will not send
  * out any data until a valid reply is received.
- * 
+ *
  * Unlocking a message from this state occurs when:
- * 
- * - other party requests to receive a description, or it is send by this 
+ *
+ * - other party requests to receive a description, or it is send by this
  *   device providing ISN_MSG_PRI_DESCRIPTION to priority, which clearly
  *   means that the other device has no clue about us, so it cannot provide
  *   us with the arguments
  * - by using the priority ISN_MSG_PRI_UNLOCK_ARGS
  *   which will send out arguments with the highest prioity,
  * - or by using the priority ISN_MSG_PRI_CLEAR to clear the request.
- * 
- * If other device requests arguments while a message is in the 
+ *
+ * If other device requests arguments while a message is in the
  * ISN_MSG_PRI_QUERY_WAIT state, such requests are ignored. If none
  * of the devices wants to transmit a data a dead-lock could occur.
  * To exit from such scenario one of the party must tell the other
- * that it is unaware of its content, which is achieved with the 
+ * that it is unaware of its content, which is achieved with the
  * request for description. Not knowing descriptors means having
  * insufficient information. Besides receiving a request for descriptors
  * a normal request for args follows (without data). Device therefore
  * uses its internal defaults.
- * 
- * This mode can be used for P2P communication where one is a host, 
+ *
+ * This mode can be used for P2P communication where one is a host,
  * or requesting party, and the other the device. Peer requesting the
- * arguments from the other party waits for arguments in the 
+ * arguments from the other party waits for arguments in the
  * ISN_MSG_PRI_QUERY_WAIT. Upon reception of arguments a callback
  * handler is called and the state-machine will not send confirmation
  * packet back to the host; to prevent end-less ping-pong situation.
- * 
+ *
  * Each party is responsible for receiving what they want.
  * Device may call with a slow-timer once per second, or per 2 seconds,
  * the isn_msg_resend_queries() which will re-schedule all of the
@@ -172,7 +172,7 @@
 #ifndef __ISN_MSG_H__
 #define __ISN_MSG_H__
 
-#include "isn.h"
+#include "isn_def.h"
 
 #ifdef __cplusplus
 extern "C" {

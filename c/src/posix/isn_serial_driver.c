@@ -1,4 +1,4 @@
-#include <isn.h>
+#include <isn_def.h>
 #include <posix/isn_serial_driver.h>
 
 #include <string.h>

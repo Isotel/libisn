@@ -39,7 +39,7 @@
 #ifndef __ISN_LOOPBACK_H__
 #define __ISN_LOOPBACK_H__
 
-#include "isn.h"
+#include "isn_def.h"
 
 #ifdef __cplusplus
 extern "C" {

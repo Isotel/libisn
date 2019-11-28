@@ -12,8 +12,7 @@
 
 #include "project.h"
 #include "PSoC/isn_usbuart.h"
-#include "isn_frame.h"
-#include "isn_msg.h"
+#include "isn.h"
 
 isn_message_t isn_message;
 isn_frame_t isn_frame;

@@ -30,7 +30,7 @@
 #ifndef __ISN_UART_H__
 #define __ISN_UART_H__
 
-#include "isn.h"
+#include "isn_def.h"
 
 #define UART_TXBUF_SIZE  64
 #define UART_RXBUF_SIZE  64

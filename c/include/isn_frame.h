@@ -103,7 +103,7 @@
 #ifndef __ISN_FRAME_H__
 #define __ISN_FRAME_H__
 
-#include "isn.h"
+#include "isn_def.h"
 
 #ifdef __cplusplus
 extern "C" {
