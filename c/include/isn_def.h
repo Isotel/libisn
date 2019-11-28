@@ -149,7 +149,7 @@
  * \ref GR_ISN_Frame, \ref GR_ISN_User and others
  * or it can act just a receiver (isn_receiver_t) providing the isn_driver_s.recv()
  * method only, as are the \ref GR_ISN_Message, \ref GR_ISN_Dispatch and the
- * \ref GR_ISN_Loopback objects.
+ * \ref GR_ISN_Redirect objects.
  *
  * ## The NULL as Ping Protocol
  *

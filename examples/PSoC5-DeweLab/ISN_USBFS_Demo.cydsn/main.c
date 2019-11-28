@@ -16,12 +16,12 @@
 #include "isn_msg.h"
 #include "isn_user.h"
 #include "isn_dispatch.h"
-#include "isn_loopback.h"
+#include "isn_redirect.h"
 
 #define TELNET      // Use this option to redirect example2 device over IDM telnet port
 
 isn_user_t isn_user;
-isn_loopback_t isn_loopback;
+isn_redirect_t isn_loopback;
 isn_message_t isn_message, isn_message2;
 isn_frame_t isn_frame;
 isn_usbfs_t isn_usbfs;
@@ -143,7 +143,7 @@ int main(void)
 #ifdef TELNET
     isn_user_init(&isn_user, &isn_frame, &isn_usbfs, ISN_PROTO_USER1);
 #else
-    isn_loopback_init(&isn_loopback, &isn_user);
+    isn_loopback_init(&isn_loopback);
     isn_user_init(&isn_user, &isn_loopback, &isn_usbfs, ISN_PROTO_USER1);
 #endif
 

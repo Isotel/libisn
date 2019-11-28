@@ -19,7 +19,7 @@ Suggested reading:
 - \ref GR_ISN_Frame
 - \ref GR_ISN_User
 - \ref GR_ISN_Dispatch
-- \ref GR_ISN_Loopback
+- \ref GR_ISN_Redirect
 
 POSIX Support:
 
