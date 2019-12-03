@@ -106,11 +106,12 @@ int isn_reactor_call_at(const isn_reactor_tasklet_t tasklet, const isn_reactor_c
     queue_table[queue_free].arg      = arg;
     queue_table[queue_free].time     = time;
     queue_changed = 1;   // we have at least one to work-on
+    int queue_index = queue_free;
     ++isn_tasklet_queue_size;
 
     queue_free = QUEUE_NEXT(queue_free);
     critical_section_exit(state);
-    return 0;
+    return queue_index;
 }
 
 /** At the moment we only have 4 muxes */
@@ -190,6 +191,7 @@ int isn_reactor_step(void) {
     return executed;
 }
 
+// \todo optimize drop by index instead of search
 int isn_reactor_drop(const isn_reactor_tasklet_t tasklet, const void* arg) {
     int removed = 0;
     uint8_t i,j;

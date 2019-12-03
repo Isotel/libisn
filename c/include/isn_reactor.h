@@ -14,10 +14,10 @@
 /*--------------------------------------------------------------------*/
 
 /// Ensure minimum delay, so add +1 as we do not know inner position of the timer
-#define ISN_TASKLETS_DELAY(delay)     (*_isn_reactor_timer + (delay) + 1)
+#define ISN_REACTOR_DELAY(delay)     (*_isn_reactor_timer + (delay) + 1)
 
 /// Repeat is to be used for periodic tasklet, which on long term does not accumulate errors
-#define ISN_TASKLETS_REPEAT(delay)    (_isn_reactor_active_timestamp + (delay))
+#define ISN_REACTOR_REPEAT(delay)    (_isn_reactor_active_timestamp + (delay))
 
 typedef uint32_t isn_reactor_time_t;
 typedef void* (* isn_reactor_tasklet_t)(const void* arg);
@@ -38,13 +38,13 @@ typedef struct isn_tasklet_entry {
 /*----------------------------------------------------------------------*/
 
 /** Queue a timed tasklet and follow-up with return or call to another function
- * \returns 0 on success, -1 if queue is full
+ * \returns index in the queue >=0 on success, -1 if queue is full
  */
 int isn_reactor_call_at(const isn_reactor_tasklet_t tasklet,
     const isn_reactor_caller_t caller, const void* arg, isn_reactor_time_t timed);
 
 /** Queue a tasklet and follow-up with return or call to another function
- * \returns 0 on success, -1 if queue is full
+ * \returns index in the queue >=0 on success, -1 if queue is full
  */
 static inline int isn_reactor_call(const isn_reactor_tasklet_t tasklet,
     const isn_reactor_caller_t caller, const void* arg) {
@@ -52,14 +52,14 @@ static inline int isn_reactor_call(const isn_reactor_tasklet_t tasklet,
 }
 
 /** Queue an tasklet
- * \returns 0 on success, -1 if queue is full
+ * \returns index in the queue >=0 on success, -1 if queue is full
  */
 static inline int isn_reactor_queue(const isn_reactor_tasklet_t tasklet, const void* arg) {
     return isn_reactor_call_at(tasklet, NULL, arg, *_isn_reactor_timer);
 }
 
 /** Queue a timed tasklet
- * \returns 0 on success, -1 if queue is full
+ * \returns index in the queue >=0 on success, -1 if queue is full
  */
 static inline int isn_reactor_queue_at(const isn_reactor_tasklet_t tasklet, const void* arg, isn_reactor_time_t timed) {
     return isn_reactor_call_at(tasklet, NULL, arg, timed);
