@@ -13,5 +13,6 @@
 #include "isn_redirect.h"
 #include "isn_user.h"
 #include "isn_msg.h"
+#include "isn_reactor.h"
 
 #endif

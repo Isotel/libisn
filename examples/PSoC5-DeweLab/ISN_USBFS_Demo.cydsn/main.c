@@ -5,20 +5,15 @@
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- * 
+ *
  * (c) Copyright 2019, Isotel, http://isotel.eu
  */
 
-
 #include "project.h"
 #include "PSoC/isn_usbfs.h"
-#include "isn_frame.h"
-#include "isn_msg.h"
-#include "isn_user.h"
-#include "isn_dispatch.h"
-#include "isn_redirect.h"
+#include "isn.h"
 
-#define TELNET      // Use this option to redirect example2 device over IDM telnet port
+//#define TELNET      // Use this option to redirect example2 device over IDM telnet port
 
 isn_user_t isn_user;
 isn_redirect_t isn_loopback;
@@ -36,9 +31,39 @@ volatile uint32_t trigger = 0;          ///< Time to trigger
 volatile uint32_t rxidle = 0;           ///< How long RX is idle to stop sending on Tx to avoid filling the USBFS PC drivers
 
 static void systick_1kHz(void) {
-    counter_1kHz++; 
+    counter_1kHz++;
     trigger++;
     if (rxidle < UINT32_MAX) rxidle++;  // Do not overflow to avoid generating spurious noise from time to time
+}
+
+/*----------------------------------------------------------*/
+/* Transparent User1 Layer sends arb data to telnet port    */
+/*----------------------------------------------------------*/
+
+void userstream_generate() {
+    if (trigger > 1000) {
+        trigger = 0;
+        void *obuf;
+        if (isn_user.drv.getsendbuf(&isn_user, &obuf, 5) == 5) {
+            memcpy(obuf, "User\n", 5);
+            isn_user.drv.send(&isn_user, obuf, 5);
+        }
+        else {
+            isn_user.drv.free(&isn_user, obuf);
+        }
+    }
+}
+
+void *userstream_send(const void *arg) {
+    void *obuf;
+    if (isn_user.drv.getsendbuf(&isn_user, &obuf, 5) == 5) {
+        memcpy(obuf, "Test\n", 5);
+        isn_user.drv.send(&isn_user, obuf, 5);
+    }
+    else {
+        isn_user.drv.free(&isn_user, obuf);
+    }
+    return NULL;
 }
 
 /*----------------------------------------------------------*/
@@ -59,6 +84,7 @@ void *serial_cb(const void *data) {
 void *led_cb(const void *data) {
     if (data) {
         led = *((const led_t *)data);
+        isn_reactor_queue_at(userstream_send, NULL, ISN_TASKLETS_DELAY(1000));
     }
     return &led;
 }
@@ -75,23 +101,6 @@ static isn_msg_table_t isn_msg_table2[] = {
     ISN_MSG_DESC_END(0)
 };
 
-/*----------------------------------------------------------*/
-/* Transparent User1 Layer sends arb data to telnet port    */
-/*----------------------------------------------------------*/
-
-void userstream_generate() {
-    if (trigger > 1000) {
-        trigger = 0;        
-        void *obuf;
-        if (isn_user.drv.getsendbuf(&isn_user, &obuf, 5) == 5) {
-            memcpy(obuf, "User\n", 5);
-            isn_user.drv.send(&isn_user, obuf, 5);
-        }
-        else {
-            isn_user.drv.free(&isn_user, obuf);
-        }
-    }
-}
 
 /*----------------------------------------------------------*/
 /* Ping Handler from IDM                                    */
@@ -128,6 +137,9 @@ int main(void)
     CySysTickStart();
     CySysTickSetCallback(0, systick_1kHz);
 
+    isn_tasklet_entry_t tasklets[8];
+    isn_reactor_init(tasklets, ARRAY_SIZE(tasklets), &counter_1kHz);
+
     /* First IDM Device with One Stream Port and dispatch to the Frame Layer for 2nd Device */
     isn_msg_init(&isn_message, isn_msg_table, ARRAY_SIZE(isn_msg_table), &isn_usbfs);
 
@@ -162,6 +174,7 @@ int main(void)
             userstream_generate();
         }
 #endif
+        isn_reactor_run();
         if ( !isn_msg_sched(&isn_message) && !isn_msg_sched(&isn_message2) ) {
             asm volatile("wfi");
         }
