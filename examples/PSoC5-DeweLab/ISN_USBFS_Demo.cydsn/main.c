@@ -15,6 +15,9 @@
 
 //#define TELNET      // Use this option to redirect example2 device over IDM telnet port
 
+#define TIME_ms(t)  ( (t) * 100 )
+#define TIME_us(t)  ( (t) / 10  )
+
 isn_user_t isn_user;
 isn_redirect_t isn_loopback;
 isn_message_t isn_message, isn_message2;
@@ -66,9 +69,14 @@ void *serial_cb(const void *data) {
 }
 
 void *led_cb(const void *data) {
+    static size_t idx = -1;
     if (data) {
         led = *((const led_t *)data);
-        isn_reactor_queue_at(userstream_send, NULL, ISN_REACTOR_DELAY(100000));
+
+        // Prolong time of existing tasklet if it exists, otherwise create new one
+        if ( isn_reactor_change_timed(idx, userstream_send, NULL, ISN_REACTOR_DELAY(TIME_ms(3000))) == 0 ) {
+            idx = isn_reactor_queue_at(userstream_send, NULL, ISN_REACTOR_DELAY(TIME_ms(3000)));
+        }
     }
     led.cnt = *SysCounter_COUNTER_LSB_PTR;
     return &led;

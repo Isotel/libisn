@@ -137,6 +137,43 @@ int isn_reactor_mutexqueue(const isn_reactor_tasklet_t tasklet, const void* arg,
     return isn_reactor_queue( (void *)((uint32_t)tasklet | (mutex_bits & 0xF)<<20), arg);
 }
 
+int isn_reactor_isvalid(int index, const isn_reactor_tasklet_t tasklet, const void* arg) {
+    if (index >= queue_len || index < 0) return 0;
+    return (QUEUE_FUNC_ADDR(index) == tasklet && queue_table[index].arg == arg) ? 1 : 0;
+}
+
+int isn_reactor_change_timed(int index, const isn_reactor_tasklet_t tasklet, const void* arg, isn_reactor_time_t newtime) {
+    critical_section_state_t state = critical_section_enter();
+    int retval = isn_reactor_isvalid(index, tasklet, arg);
+    if (retval) {
+        queue_table[index].time = newtime;
+        queue_changed = 1;
+    }
+    critical_section_exit(state);
+    return retval;
+}
+
+int isn_reactor_dropall(const isn_reactor_tasklet_t tasklet, const void* arg) {
+    int removed = 0;
+    uint8_t i,j;
+    for (i=0, j=QUEUE_NEXT(0); QUEUE_FUNC_ADDR(j); ) {
+        if (tasklet == QUEUE_FUNC_ADDR(j) && arg == (const void *)queue_table[j].arg) {
+            QUEUE_LINK(i, QUEUE_NEXT(j));
+
+            critical_section_state_t state = critical_section_enter();
+            QUEUE_LINKANDCLEAR(j, QUEUE_NEXT(queue_free));
+            QUEUE_LINK(queue_free, j);
+            queue_changed = --isn_tasklet_queue_size; // avoid additional looping if it is last
+            critical_section_exit(state);
+            j = i;
+            removed++;
+        }
+        i = j;
+        j = QUEUE_NEXT(j);
+    }
+    return removed;
+}
+
 /** Execute first available, skip mutexed and delayed.
  *
  *  Due to the nature of list operation, all mutex locked tasklet will concentrate at the beginning
@@ -147,6 +184,8 @@ int isn_reactor_mutexqueue(const isn_reactor_tasklet_t tasklet, const void* arg,
  *   - on any mutex release change, reset head to 0
  *
  *  \todo 2nd optimization is to perform timed bubble sort while looping thru the list
+ *
+ *  \todo Handle caller return codes to support re-triggering actions
  */
 int isn_reactor_step(void) {
     int executed = 0;
@@ -165,7 +204,6 @@ int isn_reactor_step(void) {
                     const void *retval = tasklet( (const void *)queue_table[j].arg );
                     if  (queue_table[j].caller ) {
                         queue_table[j].caller( tasklet, (const void *)queue_table[j].arg, retval );
-                        // \todo handle return codes for re-triggering
                     }
                     QUEUE_LINK(i, QUEUE_NEXT(j));
 
@@ -189,28 +227,6 @@ int isn_reactor_step(void) {
         isn_reactor_timer_trigger = *_isn_reactor_timer + next_time_to_exec;
     }
     return executed;
-}
-
-// \todo optimize drop by index instead of search
-int isn_reactor_drop(const isn_reactor_tasklet_t tasklet, const void* arg) {
-    int removed = 0;
-    uint8_t i,j;
-    for (i=0, j=QUEUE_NEXT(0); QUEUE_FUNC_ADDR(j); ) {
-        if (tasklet == QUEUE_FUNC_ADDR(j) && arg == (const void *)queue_table[j].arg) {
-            QUEUE_LINK(i, QUEUE_NEXT(j));
-
-            critical_section_state_t state = critical_section_enter();
-            QUEUE_LINKANDCLEAR(j, QUEUE_NEXT(queue_free));
-            QUEUE_LINK(queue_free, j);
-            queue_changed = --isn_tasklet_queue_size; // avoid additional looping if it is last
-            critical_section_exit(state);
-            j = i;
-            removed++;
-        }
-        i = j;
-        j = QUEUE_NEXT(j);
-    }
-    return removed;
 }
 
 isn_reactor_time_t isn_reactor_run(void) {

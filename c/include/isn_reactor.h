@@ -88,10 +88,24 @@ void isn_reactor_mutex_unlock(uint32_t mutex_bits);
 /** \returns non-zero if locked */
 uint32_t isn_reactor_mutex_is_locked(uint32_t mutex_bits);
 
+/** Is tasklet still pending in the queue, given by exact specs to ensure full integrity
+ * 
+ * \param index returned by any of the above queuing methods, one may also pass invalid index
+ * \param tasklet the tasklet, used in validation
+ * \param arg used in validation
+ * \returns 0 if no-longer in queue or invalid index, and 1 is valid and in the queue
+ */
+int isn_reactor_isvalid(int index, const isn_reactor_tasklet_t tasklet, const void* arg);
+
+/** Modify timed tasklet, to postpone its execution or request for immediate execution
+ * \returns 0 if no-longer in queue or invalid index, and 1 when modified successfully
+ */
+int isn_reactor_change_timed(int index, const isn_reactor_tasklet_t tasklet, const void* arg, isn_reactor_time_t newtime);
+
 /** Drop tasklets from queue of given tasklet and arg
  *  \returns number of removed tasklets
  */
-int isn_reactor_drop(const isn_reactor_tasklet_t tasklet, const void* arg);
+int isn_reactor_dropall(const isn_reactor_tasklet_t tasklet, const void* arg);
 
 /** Execute one tasklet only.
  * \returns Non-zero if any tasklet has been executed
