@@ -89,7 +89,7 @@ void isn_reactor_mutex_unlock(uint32_t mutex_bits);
 uint32_t isn_reactor_mutex_is_locked(uint32_t mutex_bits);
 
 /** Is tasklet still pending in the queue, given by exact specs to ensure full integrity
- * 
+ *
  * \param index returned by any of the above queuing methods, one may also pass invalid index
  * \param tasklet the tasklet, used in validation
  * \param arg used in validation

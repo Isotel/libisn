@@ -18,6 +18,8 @@
 #include "assert.h"
 #include "isn_msg.h"
 
+isn_message_t *isn_msg_self;
+
 /**\{ */
 
 static void send_packet(isn_message_t *obj, uint8_t msgflags, const void* data, isn_msg_size_t size) {
@@ -52,6 +54,8 @@ static int isn_msg_sendnext(isn_message_t *obj) {
 		}
 	}
     if (picked) {
+        isn_msg_self = obj;
+
         if (picked->priority >= ISN_MSG_PRI_DESCRIPTIONLOW) {
             send_packet(obj, (uint8_t)0x80 | obj->msgnum, picked->desc, strlen(picked->desc));
             picked->priority = (obj->msgnum == obj->isn_msg_received_msgnum) ? ISN_MSG_PRI_HIGHEST : ISN_MSG_PRI_LOW;
@@ -206,6 +210,7 @@ void isn_msg_init(isn_message_t *obj, isn_msg_table_t* messages, uint8_t size, i
     obj->handler_priority = 0;
     obj->pending = 1;
     obj->msgnum = 0;
+    isn_msg_self = obj;
 }
 
 /** \} \endcond */
