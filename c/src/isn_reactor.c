@@ -65,7 +65,7 @@ isn_reactor_time_t isn_reactor_timer_trigger;
 
 static isn_tasklet_entry_t *queue_table;
 static size_t queue_len;
-static volatile uint32_t queue_mutex_locked_bits = 0;
+static volatile isn_reactor_mutex_t queue_mutex_locked_bits = 0;
 static volatile uint32_t mutex_changed = 0;
 static volatile uint8_t queue_free = 0;
 static volatile uint32_t queue_changed = 0; ///< Non-zero if event queue loop should re-run
@@ -115,25 +115,25 @@ int isn_reactor_call_at(const isn_reactor_tasklet_t tasklet, const isn_reactor_c
 }
 
 /** At the moment we only have 4 muxes */
-uint32_t isn_reactor_getmutex() {
+isn_reactor_mutex_t isn_reactor_getmutex() {
     static uint32_t muxes = 0;
     if (muxes > 4) return 0; else return (1<<muxes++);
 }
 
-void isn_reactor_mutex_lock(uint32_t mutex_bits) {
+void isn_reactor_mutex_lock(isn_reactor_mutex_t mutex_bits) {
     atomic_set_bits(&queue_mutex_locked_bits, (mutex_bits & 0xF)<<20);
 }
 
-void isn_reactor_mutex_unlock(uint32_t mutex_bits) {
+void isn_reactor_mutex_unlock(isn_reactor_mutex_t mutex_bits) {
     atomic_clear_bits(&queue_mutex_locked_bits, (mutex_bits & 0xF)<<20);
     mutex_changed = 1;
 }
 
-uint32_t isn_reactor_mutex_is_locked(uint32_t mutex_bits) {
+uint32_t isn_reactor_mutex_is_locked(isn_reactor_mutex_t mutex_bits) {
     return queue_mutex_locked_bits & ((mutex_bits & 0xF)<<20);
 }
 
-int isn_reactor_mutexqueue(const isn_reactor_tasklet_t tasklet, const void* arg, uint32_t mutex_bits) {
+int isn_reactor_mutexqueue(const isn_reactor_tasklet_t tasklet, const void* arg, isn_reactor_mutex_t mutex_bits) {
     return isn_reactor_queue( (void *)((uint32_t)tasklet | (mutex_bits & 0xF)<<20), arg);
 }
 
@@ -153,6 +153,7 @@ int isn_reactor_change_timed(int index, const isn_reactor_tasklet_t tasklet, con
     return retval;
 }
 
+#ifdef REQUIRES_BUGFIX
 int isn_reactor_dropall(const isn_reactor_tasklet_t tasklet, const void* arg) {
     int removed = 0;
     uint8_t i,j;
@@ -173,6 +174,7 @@ int isn_reactor_dropall(const isn_reactor_tasklet_t tasklet, const void* arg) {
     }
     return removed;
 }
+#endif
 
 /** Execute first available, skip mutexed and delayed.
  *

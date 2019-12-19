@@ -298,7 +298,10 @@ typedef void* (* isn_events_handler_t)(const void* arg);
 #endif
 #define ARRAY_SIZE(x)   (sizeof (x) / sizeof (*x))
 #define LAMBDA(c_)      ({ c_ _;})
-#define assert2(x)      (void)(x)
+
+#if !defined(assert2)
+#  define assert2(x)    (void)(x)
+#endif
 
 #ifndef UNUSED
 #if defined(__GNUC__)

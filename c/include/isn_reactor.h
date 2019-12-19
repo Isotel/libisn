@@ -19,6 +19,7 @@
 /// Repeat is to be used for periodic tasklet, which on long term does not accumulate errors
 #define ISN_REACTOR_REPEAT(delay)    (_isn_reactor_active_timestamp + (delay))
 
+typedef uint32_t isn_reactor_mutex_t;
 typedef uint32_t isn_reactor_time_t;
 typedef void* (* isn_reactor_tasklet_t)(const void* arg);
 typedef void* (* isn_reactor_caller_t)(isn_reactor_tasklet_t tasklet, const void* arg, const void* retval);
@@ -66,7 +67,7 @@ static inline int isn_reactor_queue_at(const isn_reactor_tasklet_t tasklet, cons
 }
 
 /** \returns next free mutex bit, or 0 if none is available */
-uint32_t isn_reactor_getmutex();
+isn_reactor_mutex_t isn_reactor_getmutex();
 
 /**
  * Assign a mutex to an tasklet in the time of posting it
@@ -77,16 +78,16 @@ uint32_t isn_reactor_getmutex();
  * Example:
  *   isn_reactor_mutexqueue(mytasklet, NULL, 2);
  */
-int isn_reactor_mutexqueue(const isn_reactor_tasklet_t tasklet, const void* arg, uint32_t mutex_bits);
+int isn_reactor_mutexqueue(const isn_reactor_tasklet_t tasklet, const void* arg, isn_reactor_mutex_t mutex_bits);
 
 /** Lock given mutex bit(s), one or more at the same time, which will stop execution of tasklets in the same mutex group */
-void isn_reactor_mutex_lock(uint32_t mutex_bits);
+void isn_reactor_mutex_lock(isn_reactor_mutex_t mutex_bits);
 
 /** Unlock mutex bits */
-void isn_reactor_mutex_unlock(uint32_t mutex_bits);
+void isn_reactor_mutex_unlock(isn_reactor_mutex_t mutex_bits);
 
 /** \returns non-zero if locked */
-uint32_t isn_reactor_mutex_is_locked(uint32_t mutex_bits);
+uint32_t isn_reactor_mutex_is_locked(isn_reactor_mutex_t mutex_bits);
 
 /** Is tasklet still pending in the queue, given by exact specs to ensure full integrity
  *
