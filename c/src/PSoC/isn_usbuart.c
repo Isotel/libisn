@@ -64,7 +64,7 @@ size_t isn_usbuart_poll(isn_usbuart_t *obj) {
     if (USBUART_DataIsReady()) {
         USBUART_GetData(obj->rxbuf, size = USBUART_GetCount());    // Fetch data even if size = 0 to reinit the OUT EP
         if (size) {
-            assert2(obj->child_driver->recv(obj->child_driver, obj->rxbuf, size, &obj->drv) == obj->rxbuf);
+            assert2(obj->child_driver->recv(obj->child_driver, obj->rxbuf, size, &obj->drv) != NULL);
         }
     }
     return size;

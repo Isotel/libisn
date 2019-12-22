@@ -2,21 +2,21 @@
  *  \brief ISN UART Driver for PSoC4, PSoC5, and PSoC6 Implementation
  *  \author Uros Platise <uros@isotel.eu>, Tomaz Kanalec <tomaz@isotel.eu>
  *  \see isn_uart.h
- * 
+ *
  * \addtogroup GR_ISN_PSoC_UART
- * 
+ *
  * # Tested
- * 
+ *
  *  - Families: PSoC4, PSoC5, PSoC6
  *  - Kits: CY8CKIT-062-BLE
- * 
+ *
  * \cond Implementation
  */
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- * 
+ *
  * (c) Copyright 2019, Isotel, http://isotel.eu
  */
 
@@ -30,11 +30,11 @@
     #define UART_GetNumInTxFifo()       UART_SpiUartGetTxBufferSize()
     #define UART_PutArray(dest, size)   UART_SpiUartPutArray(dest, size)
     #define UART_GetNumInRxFifo()       UART_SpiUartGetRxBufferSize()
-    
+
     static void UART_GetArray(void *buffer, uint32_t size) {
-        uint8_t *buf = (uint8_t *) buffer;   
+        uint8_t *buf = (uint8_t *) buffer;
         for (uint8_t i=0; i<size; i++) {
-            buf[i] = (uint8_t)UART_SpiUartReadRxData();
+            *buf++ = (uint8_t)UART_SpiUartReadRxData();
         }
     }
 #endif
@@ -44,9 +44,9 @@
     #define UART_GetNumInTxFifo()       UART_GetTxBufferSize()
 
     static void UART_GetArray(void *buffer, uint32_t size) {
-        uint8_t *buf = (uint8_t *) buffer;   
+        uint8_t *buf = (uint8_t *) buffer;
         for (uint8_t i=0; i<size; i++) {
-            buf[i] = (uint8_t)UART_ReadRxData();
+            *buf++ = (uint8_t)UART_ReadRxData();
         }
     }
 #endif
@@ -59,14 +59,14 @@ static int UART_TX_is_ready(size_t size) {
 #if (UART_TX_BUFFER_SIZE >= 64)
     return ((UART_TX_BUFFER_SIZE - UART_GetNumInTxFifo()) > size) ? 1 : 0;
 #else
-#warning UART may stall CPU because buffer size is less than 64 B    
-    return 1;    
-#endif    
+#warning UART may stall CPU because buffer size is less than 64 B
+    return 1;
+#endif
 }
 
 /**
  * Allocate buffer if buf is given, or just query for availability if buf is NULL
- * 
+ *
  * \returns desired or limited (max) size in the case desired size is too big
  */
 static int isn_uart_getsendbuf(isn_layer_t *drv, void **dest, size_t size) {
@@ -99,12 +99,28 @@ static int isn_uart_send(isn_layer_t *drv, void *dest, size_t size) {
     return size;
 }
 
-size_t isn_uart_poll(isn_uart_t *obj) {
+/**
+ * Check if there are new bytes pending in the buffer, and collect them in the RX buffer.
+ * In the next step try to forward data as long they're not accepted by the receiver.
+ */
+int isn_uart_poll(isn_uart_t *obj) {
     size_t size = 0;
     if (UART_GetNumInRxFifo()) {
-        UART_GetArray(obj->rxbuf, size = UART_GetNumInRxFifo());    // Fetch data even if size = 0 to reinit the OUT EP
-        if (size) {
-            assert2(obj->child_driver->recv(obj->child_driver, obj->rxbuf, size, &obj->drv) == obj->rxbuf);
+        size = UART_GetNumInRxFifo();
+        if ( (size + obj->rx_size) > UART_RXBUF_SIZE ) size = UART_RXBUF_SIZE - obj->rx_size;
+        if ( size ) {
+            UART_GetArray(&obj->rxbuf[obj->rx_size], size);
+            obj->rx_size += size;
+        }
+        else obj->rx_dropped++; // It hasn't been really dropped yet
+    }
+    if (obj->rx_size) {
+        if (!obj->child_driver->recv(obj->child_driver, obj->rxbuf, obj->rx_size, &obj->drv)) {
+            size = 0;   // we shall retry to forward it on the next call
+        }
+        else {
+            size = obj->rx_size;
+            obj->rx_size = 0;
         }
     }
     return size;
@@ -117,7 +133,8 @@ void isn_uart_init(isn_uart_t *obj, isn_layer_t* child) {
     obj->drv.free = isn_uart_free;
     obj->child_driver = child;
     obj->buf_locked = 0;
-
+    obj->rx_size    = 0;
+    obj->rx_dropped = 0;
     UART_Start();
 }
 

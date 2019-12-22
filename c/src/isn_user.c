@@ -2,7 +2,7 @@
  *  \brief ISN User (Custom) Protocol Layer Implementation
  *  \author Uros Platise <uros@isotel.eu>
  *  \see isn_user.h
- * 
+ *
  * \cond Implementation
  * \addtogroup GR_ISN_User
  */
@@ -10,7 +10,7 @@
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- * 
+ *
  * (c) Copyright 2019, Isotel, http://isotel.eu
  */
 
@@ -38,7 +38,7 @@ static int isn_user_send(isn_layer_t *drv, void *dest, size_t size) {
     isn_user_t *obj = (isn_user_t *)drv;
     uint8_t *buf = dest;
     *(--buf) = obj->user_id;
-    return obj->parent->send(obj->parent, buf, size+1);    
+    return obj->parent->send(obj->parent, buf, size+1);
 }
 
 static const void* isn_user_recv(isn_layer_t *drv, const void *src, size_t size, isn_driver_t *caller) {

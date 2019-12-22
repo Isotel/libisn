@@ -80,7 +80,7 @@ size_t isn_usbfs_poll(isn_usbfs_t *obj) {
         USBFS_ReadOutEP(USB_RECV_EP, (uint8_t*)obj->rxbuf, size = USBFS_GetEPCount(USB_RECV_EP));
         USBFS_EnableOutEP(USB_RECV_EP);
         if (size) {
-            assert2(obj->child_driver->recv(obj->child_driver, obj->rxbuf, size, &obj->drv) == obj->rxbuf);
+            assert2(obj->child_driver->recv(obj->child_driver, obj->rxbuf, size, &obj->drv) != NULL);
         }
     }
     return size;
