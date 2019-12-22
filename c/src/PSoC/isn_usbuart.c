@@ -62,9 +62,21 @@ static int isn_usbuart_send(isn_layer_t *drv, void *dest, size_t size) {
 size_t isn_usbuart_poll(isn_usbuart_t *obj) {
     size_t size = 0;
     if (USBUART_DataIsReady()) {
-        USBUART_GetData(obj->rxbuf, size = USBUART_GetCount());    // Fetch data even if size = 0 to reinit the OUT EP
-        if (size) {
-            assert2(obj->child_driver->recv(obj->child_driver, obj->rxbuf, size, &obj->drv) != NULL);
+        size = USBUART_GetCount()
+        if ( (size + obj->rx_size) > UART_RXBUF_SIZE ) size = UART_RXBUF_SIZE - obj->rx_size;
+        if ( size ) {
+            USBUART_GetData(&obj->rxbuf[obj->rx_size], size);
+            obj->rx_size += size;
+        }
+        else obj->rx_dropped++; // It hasn't been really dropped yet
+    }
+    if (obj->rx_size) {
+        if (!obj->child_driver->recv(obj->child_driver, obj->rxbuf, obj->rx_size, &obj->drv)) {
+            size = 0;   // we shall retry to forward it on the next call
+        }
+        else {
+            size = obj->rx_size;
+            obj->rx_size = 0;
         }
     }
     return size;

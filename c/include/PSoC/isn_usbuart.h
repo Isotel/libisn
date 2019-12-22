@@ -51,6 +51,8 @@ typedef struct {
     uint8_t txbuf[TXBUF_SIZE];
     uint8_t rxbuf[RXBUF_SIZE];
     int buf_locked;
+    size_t rx_size;
+    size_t rx_dropped;
 }
 isn_usbuart_t;
 

@@ -2,22 +2,22 @@
  *  \brief ISN USBFS Bulk USB Driver for PSoC4 and PSoC5 Implementation
  *  \author Uros Platise <uros@isotel.eu>, Stanislav <stanislav@isotel.eu>
  *  \see isn_usbfs.h
- * 
+ *
  * \addtogroup GR_ISN_PSoC_USBFS
- * 
+ *
  * # Tested
- * 
+ *
  *  - PSoC5 CY8C5888, DeweLab project
- * 
+ *
  * \cond Implementation
- * 
+ *
  * # Implementation
- * 
- * Represents the most simple (tiny) implementation of bulk USB 
+ *
+ * Represents the most simple (tiny) implementation of bulk USB
  * transfer via one receiving EP 1, and 7 sending EPs with single
  * buffering in C code. It should reach sending speeds up to 400 kB/s.
- * 
- * Speed may be improved by adding additional TX and RX FIFOs, 
+ *
+ * Speed may be improved by adding additional TX and RX FIFOs,
  * and by zero-padding technique to fill the entire packet.
  */
 /*
@@ -38,7 +38,7 @@
 
 /**
  * Allocate buffer if buf is given, or just query for availability if buf is NULL
- * 
+ *
  * \returns desired or limited (max) size in the case desired size is too big
  */
 static int isn_usbfs_getsendbuf(isn_layer_t *drv, void **dest, size_t size) {
@@ -73,17 +73,24 @@ static int isn_usbfs_send(isn_layer_t *drv, void *dest, size_t size) {
     return size;
 }
 
+/**
+ * It is a packet oriented transfer, in which first part and if buffer is empty
+ * it loads data from the EP buffer. In the 2nd part it tries to forward it, and
+ * in the case it is unsuccessful it retries the next time.
+ */
 size_t isn_usbfs_poll(isn_usbfs_t *obj) {
-    size_t size = 0;
-
-    if (USBFS_GetEPState(USB_RECV_EP) == USBFS_OUT_BUFFER_FULL) {        
-        USBFS_ReadOutEP(USB_RECV_EP, (uint8_t*)obj->rxbuf, size = USBFS_GetEPCount(USB_RECV_EP));
-        USBFS_EnableOutEP(USB_RECV_EP);
-        if (size) {
-            assert2(obj->child_driver->recv(obj->child_driver, obj->rxbuf, size, &obj->drv) != NULL);
+    if (obj->rx_size == 0) {
+        if (USBFS_GetEPState(USB_RECV_EP) == USBFS_OUT_BUFFER_FULL) {
+            USBFS_ReadOutEP(USB_RECV_EP, (uint8_t*)obj->rxbuf, obj->rx_size = USBFS_GetEPCount(USB_RECV_EP));
+            USBFS_EnableOutEP(USB_RECV_EP);
         }
     }
-    return size;
+    if (obj->rx_size) {
+        if (obj->child_driver->recv(obj->child_driver, obj->rxbuf, obj->rx_size, &obj->drv)) {
+            obj->rx_size = 0;   // completed clear buffer
+        }
+    }
+    return obj->rx_size;
 }
 
 void isn_usbfs_init(isn_usbfs_t *obj, int mode, isn_layer_t* child) {
@@ -93,6 +100,8 @@ void isn_usbfs_init(isn_usbfs_t *obj, int mode, isn_layer_t* child) {
     obj->drv.free = isn_usbfs_free;
     obj->child_driver = child;
     obj->buf_locked = 0;
+    obj->rx_size    = 0;
+    obj->rx_dropped = 0;
     obj->next_send_ep = USB_SEND_EPst; /** first free EP */
 
     USBFS_Start(0u, mode);
@@ -102,9 +111,9 @@ void isn_usbfs_init(isn_usbfs_t *obj, int mode, isn_layer_t* child) {
 
 /**
  * WINUSB driverless installation
- * 
+ *
  * \note This function is called directly from the Cypress PSoC USBFS Component Driver.
- * 
+ *
  * USBFS configuration -> Advanced -> [X] Handle vendor request in user code
  * USBFS configuration -> String descriptor -> [X] Include MS OS String Descriptor
  *
