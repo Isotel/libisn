@@ -71,8 +71,9 @@ size_t isn_usbuart_poll(isn_usbuart_t *obj) {
         else obj->rx_dropped++; // It hasn't been really dropped yet
     }
     if (obj->rx_size) {
-        if (!obj->child_driver->recv(obj->child_driver, obj->rxbuf, obj->rx_size, &obj->drv)) {
+        if (obj->child_driver->recv(obj->child_driver, obj->rxbuf, obj->rx_size, &obj->drv) != obj->rx_size) {
             size = 0;   // we shall retry to forward it on the next call
+            obj->rx_retry++;
         }
         else {
             size = obj->rx_size;
@@ -89,6 +90,9 @@ void isn_usbuart_init(isn_usbuart_t *obj, int mode, isn_layer_t* child) {
     obj->drv.free = isn_usbuart_free;
     obj->child_driver = child;
     obj->buf_locked = 0;
+    obj->rx_size = 0;
+    obj->rx_retry = 0;
+    obj->rx_dropped = 0;
 
     USBUART_Start(0, mode);
     while(0 == USBUART_GetConfiguration());

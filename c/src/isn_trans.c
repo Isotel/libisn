@@ -43,9 +43,10 @@ static int isn_trans_send(isn_layer_t *drv, void *dest, size_t size) {
     dest = buf;
     *(buf++) = ISN_PROTO_TRANL;
     *(buf++) = obj->port;
-    *(buf++) = obj->txcounter & 0xFF;
-    *buf     = (obj->txcounter >> 8) & 0xFF;
-    obj->txcounter += 1;
+    *(buf++) = obj->tx_frame_counter & 0xFF;
+    *buf     = (obj->tx_frame_counter >> 8) & 0xFF;
+    obj->tx_frame_counter++;
+    obj->tx_counter+=size;
     return obj->parent->send(obj->parent, dest, size+PROTO_SIZE);
 }
 
@@ -53,6 +54,7 @@ static size_t isn_trans_recv(isn_layer_t *drv, const void *src, size_t size, isn
     isn_trans_t *obj = (isn_trans_t *)drv;
     const uint8_t *buf = src;
     if (*buf == ISN_PROTO_TRANL) {
+        obj->rx_counter += size - PROTO_SIZE;
         return obj->child->recv(obj->child, buf+PROTO_SIZE, size-PROTO_SIZE, drv) + PROTO_SIZE;
     }
     return 0;
@@ -66,7 +68,9 @@ void isn_translong_init(isn_trans_t *obj, isn_layer_t* child, isn_layer_t* paren
     obj->parent         = parent;
     obj->child          = child;
     obj->port           = port;
-    obj->txcounter      = 0;
+    obj->rx_counter     = 0;
+    obj->tx_counter     = 0;
+    obj->tx_frame_counter=0;
 }
 
 /** \} \endcond */

@@ -55,6 +55,9 @@ typedef struct {
 
     /* Private data */
     isn_driver_t* target;
+
+    size_t tx_counter;
+    size_t tx_retry;
 }
 isn_redirect_t;
 

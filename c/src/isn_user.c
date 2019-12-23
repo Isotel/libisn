@@ -38,6 +38,7 @@ static int isn_user_send(isn_layer_t *drv, void *dest, size_t size) {
     isn_user_t *obj = (isn_user_t *)drv;
     uint8_t *buf = dest;
     *(--buf) = obj->user_id;
+    obj->tx_counter+=size;
     return obj->parent->send(obj->parent, buf, size+1);
 }
 
@@ -45,6 +46,7 @@ static size_t isn_user_recv(isn_layer_t *drv, const void *src, size_t size, isn_
     isn_user_t *obj = (isn_user_t *)drv;
     const uint8_t *buf = src;
     if (*buf == obj->user_id) {
+        obj->rx_counter+=size-1;
         return obj->child->recv(obj->child, buf+1, size-1, drv) + 1;
     }
     return 0;
@@ -58,6 +60,8 @@ void isn_user_init(isn_user_t *obj, isn_layer_t* child, isn_layer_t* parent, uin
     obj->user_id        = user_id;
     obj->child          = child;
     obj->parent         = parent;
+    obj->rx_counter     = 0;
+    obj->tx_counter     = 0;
 }
 
 /** \} \endcond */

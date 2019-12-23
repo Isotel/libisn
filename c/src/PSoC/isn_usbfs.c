@@ -79,14 +79,21 @@ static int isn_usbfs_send(isn_layer_t *drv, void *dest, size_t size) {
  * in the case it is unsuccessful it retries the next time.
  */
 size_t isn_usbfs_poll(isn_usbfs_t *obj) {
+    static uint8_t received_data = 0;
     if (obj->rx_size == 0) {
         if (USBFS_GetEPState(USB_RECV_EP) == USBFS_OUT_BUFFER_FULL) {
             USBFS_ReadOutEP(USB_RECV_EP, (uint8_t*)obj->rxbuf, obj->rx_size = USBFS_GetEPCount(USB_RECV_EP));
             USBFS_EnableOutEP(USB_RECV_EP);
+            obj->rx_counter += obj->rx_size;
+            received_data = 1;
         }
     }
     if (obj->rx_size) {
-        if (obj->child_driver->recv(obj->child_driver, obj->rxbuf, obj->rx_size, &obj->drv)) {
+        if (obj->child_driver->recv(obj->child_driver, obj->rxbuf, obj->rx_size, &obj->drv) != obj->rx_size) {
+            obj->rx_retry+=received_data;   // increment just once after receiving new data
+            received_data=0;
+        }
+        else {            
             obj->rx_size = 0;   // completed clear buffer
         }
     }
@@ -101,7 +108,7 @@ void isn_usbfs_init(isn_usbfs_t *obj, int mode, isn_layer_t* child) {
     obj->child_driver = child;
     obj->buf_locked = 0;
     obj->rx_size    = 0;
-    obj->rx_dropped = 0;
+    obj->rx_counter = 0;
     obj->next_send_ep = USB_SEND_EPst; /** first free EP */
 
     USBFS_Start(0u, mode);

@@ -26,8 +26,10 @@ static size_t isn_redirect_recv(isn_layer_t *drv, const void *src, size_t size, 
     if ( target->getsendbuf(target, &obuf, size)==size ) {
         memcpy(obuf, src, size);
         target->send(target, obuf, size);
+        obj->tx_counter += size;
         return size;
     }
+    obj->tx_retry++;
     target->free(target, obuf);
     return 0;
 }
@@ -35,6 +37,8 @@ static size_t isn_redirect_recv(isn_layer_t *drv, const void *src, size_t size, 
 void isn_redirect_init(isn_redirect_t *obj, isn_layer_t* target) {
     obj->drv.recv = isn_redirect_recv;
     obj->target   = target;
+    obj->tx_retry = 0;
+    obj->tx_counter=0;
 }
 
 /** \} \endcond */

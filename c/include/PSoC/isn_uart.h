@@ -47,6 +47,9 @@ typedef struct {
     int buf_locked;
     size_t rx_size;
     size_t rx_dropped;
+    size_t rx_counter;
+    size_t rx_retry;
+    size_t tx_counter;
 }
 isn_uart_t;
 
