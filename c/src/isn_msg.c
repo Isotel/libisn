@@ -153,13 +153,13 @@ uint8_t isn_msg_resend_queries(isn_message_t *obj) {
  * data at a time until sendnext() sends reply. However we may handle
  * multiple requests for data since they don't provide any input data.
  */
-static const void * isn_message_recv(isn_layer_t *drv, const void *src, size_t size, isn_driver_t *caller) {
+static size_t isn_message_recv(isn_layer_t *drv, const void *src, size_t size, isn_driver_t *caller) {
     isn_message_t *obj = (isn_message_t *)drv;
     const uint8_t *buf = src;
     uint8_t data_size = size - 2;
     uint8_t msgnum = buf[1] & 0x7F;
 
-    if (*buf != ISN_PROTO_MSG) return NULL;
+    if (*buf != ISN_PROTO_MSG) return 0;
 #if 0 // Code temporarily removed until loading specifications are 100% cleared
 #ifndef FASTLOAD_BUG
     if (msgnum == ISN_MSG_NUM_LAST) {    // speed up loading and mark all mesages to be send out
@@ -174,7 +174,7 @@ static const void * isn_message_recv(isn_layer_t *drv, const void *src, size_t s
         data_size = 0;
     }
     if (data_size > 0 && (obj->isn_msg_received_data != NULL || data_size != obj->isn_msg_table[msgnum].size)) {
-        return NULL;  // we cannot handle multiple receive buffer requests atm, nor wrong input sizes
+        return 0;  // we cannot handle multiple receive buffer requests atm, nor wrong input sizes
     }
     if (data_size > 0) {
         assert(data_size <= RECV_MESSAGE_SIZE);
@@ -184,7 +184,8 @@ static const void * isn_message_recv(isn_layer_t *drv, const void *src, size_t s
     }
     isn_msg_post(obj, msgnum, (uint8_t) (buf[1] & 0x80 ? ISN_MSG_PRI_DESCRIPTION : ISN_MSG_PRI_HIGHEST));
     obj->msgnum = msgnum;   // speed-up response time to all incoming request and to release incoming buffer
-    return buf;
+    
+    return size;
 }
 
 

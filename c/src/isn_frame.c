@@ -77,7 +77,7 @@ static int isn_frame_send(isn_layer_t *drv, void *dest, size_t size) {
 #define IS_NONE         0
 #define IS_IN_MESSAGE   1
 
-static const void * isn_frame_recv(isn_layer_t *drv, const void *src, size_t size, isn_driver_t *caller) {
+static size_t isn_frame_recv(isn_layer_t *drv, const void *src, size_t size, isn_driver_t *caller) {
     isn_frame_t *obj = (isn_frame_t *)drv;
     const uint8_t *buf = src;
 
@@ -143,7 +143,7 @@ static const void * isn_frame_recv(isn_layer_t *drv, const void *src, size_t siz
         if (obj->other) obj->other->recv(obj->other, obj->recv_buf, obj->recv_size, caller);
         obj->recv_size = 0;
     }
-    return buf;
+    return size;
 }
 
 void isn_frame_init(isn_frame_t *obj, isn_frame_mode_t mode, isn_layer_t* child, isn_layer_t* other, isn_layer_t* parent, volatile uint32_t *counter, uint32_t timeout) {

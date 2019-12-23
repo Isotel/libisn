@@ -19,17 +19,17 @@
 
 /**\{ */
 
-static const void* isn_redirect_recv(isn_layer_t *drv, const void *src, size_t size, isn_driver_t *caller) {
+static size_t isn_redirect_recv(isn_layer_t *drv, const void *src, size_t size, isn_driver_t *caller) {
     isn_redirect_t *obj = (isn_redirect_t *)drv;
     isn_driver_t *target = (obj->target) ? obj->target : caller;
     void *obuf = NULL;
     if ( target->getsendbuf(target, &obuf, size)==size ) {
         memcpy(obuf, src, size);
         target->send(target, obuf, size);
-        return src;
+        return size;
     }
     target->free(target, obuf);
-    return NULL;
+    return 0;
 }
 
 void isn_redirect_init(isn_redirect_t *obj, isn_layer_t* target) {

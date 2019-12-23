@@ -49,13 +49,13 @@ static int isn_trans_send(isn_layer_t *drv, void *dest, size_t size) {
     return obj->parent->send(obj->parent, dest, size+PROTO_SIZE);
 }
 
-static const void* isn_trans_recv(isn_layer_t *drv, const void *src, size_t size, isn_driver_t *caller) {
+static size_t isn_trans_recv(isn_layer_t *drv, const void *src, size_t size, isn_driver_t *caller) {
     isn_trans_t *obj = (isn_trans_t *)drv;
     const uint8_t *buf = src;
     if (*buf == ISN_PROTO_TRANL) {
-        return obj->child->recv(obj->child, buf+PROTO_SIZE, size-PROTO_SIZE, drv);
+        return obj->child->recv(obj->child, buf+PROTO_SIZE, size-PROTO_SIZE, drv) + PROTO_SIZE;
     }
-    return NULL;
+    return 0;
 }
 
 void isn_translong_init(isn_trans_t *obj, isn_layer_t* child, isn_layer_t* parent, uint8_t port) {

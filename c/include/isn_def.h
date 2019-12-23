@@ -237,9 +237,9 @@ typedef struct isn_driver_s {
      * \param src pointer to received data
      * \param size size of the received data
      * \param caller device driver structure, enbles simple echoing or multi-path replies
-     * \returns src buf pointer, same as the one provided or NULL if receiver did not accept the packet
+     * \returns number of bytes actually processed, the difference is considered as returned
      */
-    const void * (*recv)(isn_layer_t *drv, const void *src, size_t size, struct isn_driver_s *caller);
+    size_t (*recv)(isn_layer_t *drv, const void *src, size_t size, struct isn_driver_s *caller);
 
     /** Allocate buffer for transmission thru layers
      *
@@ -281,7 +281,7 @@ isn_driver_t;
  * ISN Layer Receiver only
  */
 typedef struct {
-    const void * (*recv)(isn_layer_t *drv, const void *buf, size_t size, isn_driver_t *caller);
+    size_t (*recv)(isn_layer_t *drv, const void *buf, size_t size, isn_driver_t *caller);
 }
 isn_receiver_t;
 
