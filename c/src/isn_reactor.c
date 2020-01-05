@@ -59,7 +59,7 @@
 #define QUEUE_MUTEX(i)              ((uint32_t)(queue_table[i].tasklet) & 0x00FC0000)
 #define QUEUE_TIME(i)               queue_table[i].time
 
-isn_reactor_time_t isn_reactor_active_timestamp;
+isn_reactor_time_t _isn_reactor_active_timestamp;
 const volatile isn_reactor_time_t* _isn_reactor_timer;
 isn_reactor_time_t isn_reactor_timer_trigger;
 
@@ -202,7 +202,7 @@ int isn_reactor_step(void) {
                 int32_t time_to_exec = (int32_t)(QUEUE_TIME(j) - *_isn_reactor_timer);
                 if (time_to_exec <= 0) {
                     isn_reactor_tasklet_t tasklet = QUEUE_FUNC_ADDR(j);
-                    isn_reactor_active_timestamp = queue_table[j].time;
+                    _isn_reactor_active_timestamp = queue_table[j].time;
                     const void *retval = tasklet( (const void *)queue_table[j].arg );
                     if  (queue_table[j].caller ) {
                         queue_table[j].caller( tasklet, (const void *)queue_table[j].arg, retval );
