@@ -23,11 +23,12 @@ static size_t isn_redirect_recv(isn_layer_t *drv, const void *src, size_t size, 
     isn_redirect_t *obj = (isn_redirect_t *)drv;
     isn_driver_t *target = (obj->target) ? obj->target : caller;
     void *obuf = NULL;
-    if ( target->getsendbuf(target, &obuf, size)==size ) {
-        memcpy(obuf, src, size);
-        target->send(target, obuf, size);
-        obj->tx_counter += size;
-        return size;
+    int bs = target->getsendbuf(target, &obuf, size);
+    if ( bs > 0 ) {
+        memcpy(obuf, src, bs);
+        target->send(target, obuf, bs);
+        obj->tx_counter += bs;
+        return bs;
     }
     obj->tx_retry++;
     target->free(target, obuf);

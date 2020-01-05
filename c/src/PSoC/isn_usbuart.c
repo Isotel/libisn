@@ -70,15 +70,13 @@ size_t isn_usbuart_poll(isn_usbuart_t *obj) {
         }
         else obj->rx_dropped++; // It hasn't been really dropped yet
     }
-    if (obj->rx_size) {
-        if (obj->child_driver->recv(obj->child_driver, obj->rxbuf, obj->rx_size, &obj->drv) != obj->rx_size) {
-            size = 0;   // we shall retry to forward it on the next call
-            obj->rx_retry++;
+    if (obj->rx_size) {        
+        size = obj->child_driver->recv(obj->child_driver, obj->rxbuf, obj->rx_size, &obj->drv);
+        if (size < obj->rx_size) {
+            obj->rx_retry++;    // Packet could not be fully accepted, retry next time
+            memmove(obj->rxbuf, &obj->rxbuf[size], obj->rx_size - size);
         }
-        else {
-            size = obj->rx_size;
-            obj->rx_size = 0;
-        }
+        obj->rx_size -= size;
     }
     return size;
 }

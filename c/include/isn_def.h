@@ -243,14 +243,14 @@ typedef struct isn_driver_s {
 
     /** Allocate buffer for transmission thru layers
      *
-     * If buf is NULL then function only performs a check on availability and returns
+     * If dest is NULL then function only performs a check on availability and returns
      * possible size for allocation. Once buffer is allocated it will be automatically
      * freed by the send() below. Otherwise user needs to call free() function below.
      *
      * Note that size 0 still means availability, as it stands for empty packet.
      * If there is no space available function must return -1.
      *
-     * \param dest reference to a local pointer, which is updated, pointed to given/allocated buffer
+     * \param dest reference to a local pointer, which is updated, pointed to given/allocated buffer, or NULL to check availability only
      * \param size requested size
      * \returns obtained size, and buf pointer is set; if size cannot be obtained buf is (must be) set to NULL
      */

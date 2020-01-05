@@ -96,7 +96,7 @@ static int isn_uart_send(isn_layer_t *drv, void *dest, size_t size) {
     assert(size <= TXBUF_SIZE);
     while( !UART_TX_is_ready(size) );   // todo: timeout assert
     UART_PutArray(dest, size);
-    isn_uart_free(drv, dest);           // free buffer, however need to block use of buffer until sent out    
+    isn_uart_free(drv, dest);           // free buffer, however need to block use of buffer until sent out
     obj->tx_counter += size;
     return size;
 }
@@ -117,15 +117,13 @@ int isn_uart_poll(isn_uart_t *obj) {
         }
         else obj->rx_dropped++; // It hasn't been really dropped yet
     }
-    if (obj->rx_size) {
-        if (obj->child_driver->recv(obj->child_driver, obj->rxbuf, obj->rx_size, &obj->drv) != obj->rx_size) {
-            size = 0;   // we shall retry on the next call
-            obj->rx_retry++;
+    if (obj->rx_size) {        
+        size = obj->child_driver->recv(obj->child_driver, obj->rxbuf, obj->rx_size, &obj->drv);
+        if (size < obj->rx_size) {
+            obj->rx_retry++;    // Packet could not be fully accepted, retry next time
+            memmove(obj->rxbuf, &obj->rxbuf[size], obj->rx_size - size);
         }
-        else {
-            size = obj->rx_size;
-            obj->rx_size = 0;
-        }
+        obj->rx_size -= size;
     }
     return size;
 }
