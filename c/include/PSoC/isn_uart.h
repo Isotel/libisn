@@ -62,6 +62,11 @@ isn_uart_t;
  */
 int isn_uart_poll(isn_uart_t *obj);
 
+/** Collect new data to frames, which are then forwarded based on timing properties
+ * \returns number of bytes received or negative value of dropped bytes
+ */
+int isn_uart_collect(isn_uart_t *obj, size_t maxsize, volatile uint32_t *counter, uint32_t timeout);
+
 /** Initialize
  *
  * \param child use the next layer, like isn_frame
