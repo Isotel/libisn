@@ -58,6 +58,7 @@ typedef struct {
 
     size_t tx_counter;
     size_t tx_retry;
+    uint8_t en_fragment;    ///< Enable fragmention
 }
 isn_redirect_t;
 
@@ -78,6 +79,17 @@ void isn_redirect_init(isn_redirect_t *obj, isn_layer_t* target);
  * returned back to the caller.
  */
 inline static void isn_loopback_init(isn_redirect_t *obj) { isn_redirect_init(obj, NULL); }
+
+/** Enable Fragmentation
+ * 
+ * Means that a driver checks will forward data even if target has less than required
+ * amount of buffer available. This is works for streaming data and is only possible if 
+ * there are no other packet oriented
+ * protocols in the loop.
+ * 
+ * \param state set to non-zero value to enable fragmentation
+ */
+inline static void isn_redirect_setfragmentation(isn_redirect_t *obj, uint8_t state) {obj->en_fragment = state;}
 
 #ifdef __cplusplus
 }

@@ -106,9 +106,8 @@ static int isn_uart_send(isn_layer_t *drv, void *dest, size_t size) {
  * In the next step try to forward data as long they're not accepted by the receiver.
  */
 int isn_uart_poll(isn_uart_t *obj) {
-    size_t size = 0;
-    if (UART_GetNumInRxFifo()) {
-        size = UART_GetNumInRxFifo();
+    size_t size = UART_GetNumInRxFifo();
+    if (size) {
         if ( (size + obj->rx_size) > UART_RXBUF_SIZE ) size = UART_RXBUF_SIZE - obj->rx_size;
         if ( size ) {
             UART_GetArray(&obj->rxbuf[obj->rx_size], size);
@@ -130,9 +129,8 @@ int isn_uart_poll(isn_uart_t *obj) {
 
 int isn_uart_collect(isn_uart_t *obj, size_t maxsize, volatile uint32_t *counter, uint32_t timeout) {
     static uint32_t ts = 0;
-    size_t size = 0;
-    if (UART_GetNumInRxFifo()) {
-        size = UART_GetNumInRxFifo();
+    size_t size = UART_GetNumInRxFifo();
+    if (size) {
         if ( (size + obj->rx_size) > UART_RXBUF_SIZE ) size = UART_RXBUF_SIZE - obj->rx_size;
         if ( size ) {
             UART_GetArray(&obj->rxbuf[obj->rx_size], size);
@@ -142,8 +140,8 @@ int isn_uart_collect(isn_uart_t *obj, size_t maxsize, volatile uint32_t *counter
         }
         else obj->rx_dropped++; // It hasn't been really dropped yet
     }
-    if (obj->rx_size >= maxsize || (*counter - ts) > timeout) {
-        size = obj->child_driver->recv(obj->child_driver, obj->rxbuf, obj->rx_size, &obj->drv);
+    if (obj->rx_size >= maxsize || ((*counter - ts) > timeout && obj->rx_size > 0)) {
+        size = obj->child_driver->recv(obj->child_driver, obj->rxbuf, obj->rx_size > maxsize ? maxsize : obj->rx_size, &obj->drv);
         if (size < obj->rx_size) {
             obj->rx_retry++;    // Packet could not be fully accepted, retry next time
             memmove(obj->rxbuf, &obj->rxbuf[size], obj->rx_size - size);
