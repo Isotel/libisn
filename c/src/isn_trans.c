@@ -44,7 +44,7 @@ static int isn_trans_send(isn_layer_t *drv, void *dest, size_t size) {
     *(buf++) = ISN_PROTO_TRANL;
     *(buf++) = obj->port;
     *(buf++) = obj->tx_frame_counter & 0xFF;
-    *buf     = (obj->tx_frame_counter >> 8) & 0xFF;
+    *buf     = (obj->tx_frame_counter >> 8) & 0x3F;
     obj->tx_frame_counter++;
     obj->tx_counter+=size;
     return obj->parent->send(obj->parent, dest, size+PROTO_SIZE);

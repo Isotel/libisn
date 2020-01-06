@@ -138,7 +138,7 @@ int isn_uart_collect(isn_uart_t *obj, size_t maxsize, volatile uint32_t *counter
             obj->rx_counter += size;
             ts = *counter;
         }
-        else obj->rx_dropped++; // It hasn't been really dropped yet
+        else obj->rx_dropped++; // It hasn't been really dropped yet \todo Read overflow from low-level driver
     }
     if (obj->rx_size >= maxsize || ((*counter - ts) > timeout && obj->rx_size > 0)) {
         size = obj->child_driver->recv(obj->child_driver, obj->rxbuf, obj->rx_size > maxsize ? maxsize : obj->rx_size, &obj->drv);
