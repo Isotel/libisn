@@ -34,7 +34,7 @@
 
 /** IN EP in USB therminology (EP that sends data to the host) */
 #define USB_SEND_EPst   2
-#define USB_SEND_EPend  8
+static uint8_t USB_SEND_EPend = USB_SEND_EPst + 6;
 
 /**
  * Allocate buffer if buf is given, or just query for availability if buf is NULL
@@ -109,6 +109,12 @@ void isn_usbfs_init(isn_usbfs_t *obj, int mode, isn_layer_t* child) {
     USBFS_Start(0u, mode);
     while (0u == USBFS_GetConfiguration()) {}
     USBFS_EnableOutEP(USB_RECV_EP);
+}
+
+void isn_usbfs_set_maxinbufs(uint8_t count) {
+    if (count < 1) count = 1;
+    if (count > 7) count = 7;
+    USB_SEND_EPend = USB_SEND_EPst + count - 1;
 }
 
 /**

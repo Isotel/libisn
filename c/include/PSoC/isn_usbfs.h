@@ -55,11 +55,19 @@ isn_usbfs_t;
  */
 size_t isn_usbfs_poll(isn_usbfs_t *obj);
 
-/** Initialize
+/** Initialize USB
+ * 
+ * By default USB uses all USB IN buffers (direction from
+ * the device to the PC). To control the number of buffers use the isn_usbfs_set_maxinbufs().
  * 
  * \param mode USBFS_3V_OPERATION, USBFS_5V_OPERATION, USBFS_DWR_POWER_OPERATION
  * \param child use the next layer, like isn_frame
  */
 void isn_usbfs_init(isn_usbfs_t *obj, int mode, isn_layer_t* child);
+
+/**
+ * \param count sets maximum number of USB IN buffers, min 1 max 7 (default)
+ */
+void isn_usbfs_set_maxinbufs(uint8_t count);
 
 #endif
