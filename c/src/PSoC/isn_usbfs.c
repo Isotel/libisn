@@ -36,21 +36,35 @@
 #define USB_SEND_EPst   2
 static uint8_t USB_SEND_EPend = USB_SEND_EPst + 6;
 
+/** INEP could be assigned to specific user layer to guarantee buf availability and
+ *  same EP number through out continuous tranfers */
+static isn_layer_t * inep_reservation[7] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+
 /**
  * Allocate buffer if buf is given, or just query for availability if buf is NULL
  *
  * \returns desired or limited (max) size in the case desired size is too big
  */
-static int isn_usbfs_getsendbuf(isn_layer_t *drv, void **dest, size_t size) {
+static int isn_usbfs_getsendbuf(isn_layer_t *drv, void **dest, size_t size, isn_layer_t *caller) {
     isn_usbfs_t *obj = (isn_usbfs_t *)drv;
 
-    if (USBFS_GetEPState(obj->next_send_ep) == USBFS_IN_BUFFER_EMPTY && !obj->buf_locked) {
+    if (!obj->buf_locked) {
+        // Find appropriate resource
+        int current_ep = obj->next_send_ep;
+        while ( (inep_reservation[obj->next_send_ep - USB_SEND_EPst] != caller && 
+                 inep_reservation[obj->next_send_ep - USB_SEND_EPst] != NULL) ||
+               USBFS_GetEPState(obj->next_send_ep) != USBFS_IN_BUFFER_EMPTY) {
+
+            if (++obj->next_send_ep > USB_SEND_EPend) obj->next_send_ep = USB_SEND_EPst;
+            if (current_ep == obj->next_send_ep) goto none_avail;
+        }
         if (dest) {
             obj->buf_locked = obj->next_send_ep;
             *dest = obj->txbuf;
         }
         return (size > USB_BUF_SIZE) ? USB_BUF_SIZE : size;
     }
+none_avail:
     if (dest) {
         *dest = NULL;
     }
@@ -68,7 +82,7 @@ static int isn_usbfs_send(isn_layer_t *drv, void *dest, size_t size) {
     assert(size <= TXBUF_SIZE);
     isn_usbfs_t *obj = (isn_usbfs_t *)drv;
     USBFS_LoadInEP(obj->buf_locked, dest, size);
-    if (++obj->next_send_ep > USB_SEND_EPend) obj->next_send_ep = USB_SEND_EPst;
+    //if (++obj->next_send_ep > USB_SEND_EPend) obj->next_send_ep = USB_SEND_EPst;
     isn_usbfs_free(drv, dest);
     return size;
 }
@@ -86,7 +100,7 @@ size_t isn_usbfs_poll(isn_usbfs_t *obj) {
             obj->rx_counter += obj->rx_size;
         }
     }
-    if (obj->rx_size) {        
+    if (obj->rx_size) {
         if (obj->child_driver->recv(obj->child_driver, obj->rxbuf, obj->rx_size, &obj->drv) == obj->rx_size) {
             obj->rx_size = 0;
         }
@@ -112,9 +126,17 @@ void isn_usbfs_init(isn_usbfs_t *obj, int mode, isn_layer_t* child) {
 }
 
 void isn_usbfs_set_maxinbufs(uint8_t count) {
-    if (count < 1) count = 1;
-    if (count > 7) count = 7;
+    if (count < 1) count = 1; else if (count > 7) count = 7;
     USB_SEND_EPend = USB_SEND_EPst + count - 1;
+}
+
+void isn_usbfs_assign_inbuf(uint8_t no, isn_layer_t *reserve_for_layer) {
+    if (no == 0) {
+        for (; no<7; no++) inep_reservation[no] = reserve_for_layer;
+        return;
+    }
+    if (no < 1) no = 1; else if (no > 7) no = 7;
+    inep_reservation[no-1] = reserve_for_layer;
 }
 
 /**

@@ -20,9 +20,9 @@
 
 /**\{ */
 
-static int isn_trans_getsendbuf(isn_layer_t *drv, void **dest, size_t size) {
+static int isn_trans_getsendbuf(isn_layer_t *drv, void **dest, size_t size, isn_layer_t *caller) {
     isn_trans_t *obj = (isn_trans_t *)drv;
-    int osize = obj->parent->getsendbuf(obj->parent, dest, size+PROTO_SIZE);
+    int osize = obj->parent->getsendbuf(obj->parent, dest, size+PROTO_SIZE, drv);
     uint8_t **buf = (uint8_t **)dest;
     if (buf) {
         if (*buf) (*buf)+=PROTO_SIZE; // add protocol header at the front
@@ -50,7 +50,7 @@ static int isn_trans_send(isn_layer_t *drv, void *dest, size_t size) {
     return obj->parent->send(obj->parent, dest, size+PROTO_SIZE);
 }
 
-static size_t isn_trans_recv(isn_layer_t *drv, const void *src, size_t size, isn_driver_t *caller) {
+static size_t isn_trans_recv(isn_layer_t *drv, const void *src, size_t size, isn_layer_t *caller) {
     isn_trans_t *obj = (isn_trans_t *)drv;
     const uint8_t *buf = src;
     if (*buf == ISN_PROTO_TRANL) {

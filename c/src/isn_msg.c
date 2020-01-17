@@ -26,7 +26,7 @@ static void send_packet(isn_message_t *obj, uint8_t msgflags, const void* data, 
     void *dest = NULL;
     int xsize = size + 2;
 
-    if (obj->parent_driver->getsendbuf(obj->parent_driver, &dest, xsize) == xsize) {
+    if (obj->parent_driver->getsendbuf(obj->parent_driver, &dest, xsize, (isn_layer_t *)obj) == xsize) {
         uint8_t *buf = dest;
         *buf     = ISN_PROTO_MSG;
         *(buf+1) = msgflags;
@@ -191,7 +191,7 @@ static size_t isn_message_recv(isn_layer_t *drv, const void *src, size_t size, i
 
 int isn_msg_sched(isn_message_t *obj) {
     if (obj->pending) {
-        if (obj->parent_driver->getsendbuf(obj->parent_driver, NULL, 1) > 0) {    // Test if we have at least 1 byte space to send?
+        if (obj->parent_driver->getsendbuf(obj->parent_driver, NULL, 1, (isn_layer_t *)obj) > 0) {    // Test if we have at least 1 byte space to send?
             obj->pending = isn_msg_sendnext(obj);
         }
     }

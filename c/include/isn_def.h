@@ -239,7 +239,7 @@ typedef struct isn_driver_s {
      * \param caller device driver structure, enbles simple echoing or multi-path replies
      * \returns number of bytes actually processed, the difference is considered as returned
      */
-    size_t (*recv)(isn_layer_t *drv, const void *src, size_t size, struct isn_driver_s *caller);
+    size_t (*recv)(isn_layer_t *drv, const void *src, size_t size, isn_layer_t *caller);
 
     /** Allocate buffer for transmission thru layers
      *
@@ -252,9 +252,10 @@ typedef struct isn_driver_s {
      *
      * \param dest reference to a local pointer, which is updated, pointed to given/allocated buffer, or NULL to check availability only
      * \param size requested size
+     * \param caller reference, typ used for QoS
      * \returns obtained size, and buf pointer is set; if size cannot be obtained buf is (must be) set to NULL
      */
-    int (*getsendbuf)(isn_layer_t *drv, void **dest, size_t size);
+    int (*getsendbuf)(isn_layer_t *drv, void **dest, size_t size, isn_layer_t *caller);
 
     /** Send Data
      *

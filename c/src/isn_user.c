@@ -18,9 +18,9 @@
 
 /**\{ */
 
-static int isn_user_getsendbuf(isn_layer_t *drv, void **dest, size_t size) {
+static int isn_user_getsendbuf(isn_layer_t *drv, void **dest, size_t size, isn_layer_t *caller) {
     isn_user_t *obj = (isn_user_t *)drv;
-    int osize = obj->parent->getsendbuf(obj->parent, dest, size+1);
+    int osize = obj->parent->getsendbuf(obj->parent, dest, size+1, drv);
     uint8_t **buf = (uint8_t **)dest;
     if (buf) {
         if (*buf) (*buf)++; // add protocol header at the front
@@ -42,7 +42,7 @@ static int isn_user_send(isn_layer_t *drv, void *dest, size_t size) {
     return obj->parent->send(obj->parent, buf, size+1);
 }
 
-static size_t isn_user_recv(isn_layer_t *drv, const void *src, size_t size, isn_driver_t *caller) {
+static size_t isn_user_recv(isn_layer_t *drv, const void *src, size_t size, isn_layer_t *caller) {
     isn_user_t *obj = (isn_user_t *)drv;
     const uint8_t *buf = src;
     if (*buf == obj->user_id) {

@@ -37,11 +37,11 @@ static uint8_t crc8(const uint8_t b) {
 /**
  * Allocate a byte more for a header (protocol number) and optional checksum at the end
  */
-static int isn_frame_getsendbuf(isn_layer_t *drv, void **dest, size_t size) {
+static int isn_frame_getsendbuf(isn_layer_t *drv, void **dest, size_t size, isn_layer_t *caller) {
     isn_frame_t *obj = (isn_frame_t *)drv;
     if (size > ISN_FRAME_MAXSIZE) size = ISN_FRAME_MAXSIZE; // limited by the frame protocol
     int xs = 1 + (int)obj->crc_enabled;
-    xs = obj->parent->getsendbuf(obj->parent, dest, size + xs) - xs;
+    xs = obj->parent->getsendbuf(obj->parent, dest, size + xs, drv) - xs;
     uint8_t **buf = (uint8_t **)dest;
     if (buf) {
         if (*buf) (*buf)++;
@@ -77,7 +77,7 @@ static int isn_frame_send(isn_layer_t *drv, void *dest, size_t size) {
 #define IS_NONE         0
 #define IS_IN_MESSAGE   1
 
-static size_t isn_frame_recv(isn_layer_t *drv, const void *src, size_t size, isn_driver_t *caller) {
+static size_t isn_frame_recv(isn_layer_t *drv, const void *src, size_t size, isn_layer_t *caller) {
     isn_frame_t *obj = (isn_frame_t *)drv;
     const uint8_t *buf = src;
 
