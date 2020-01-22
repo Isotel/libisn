@@ -227,6 +227,9 @@ typedef struct {
     /* ISN Abstract Class Driver */
     isn_receiver_t drv;
 
+    size_t tx_dropped;
+    size_t tx_packets;
+
     /* Private data */
     isn_driver_t* parent_driver;
     isn_msg_table_t* isn_msg_table;             ///< Ref to the message table

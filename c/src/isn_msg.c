@@ -32,8 +32,10 @@ static void send_packet(isn_message_t *obj, uint8_t msgflags, const void* data, 
         *(buf+1) = msgflags;
         memcpy(buf+2, data, size);
         obj->parent_driver->send(obj->parent_driver, buf, xsize);
+        obj->tx_packets++;
         return;
     }
+    obj->tx_dropped++;
     obj->parent_driver->free(obj->parent_driver, dest);   // we're ok to free NULL to simplify code
 }
 
@@ -211,6 +213,8 @@ void isn_msg_init(isn_message_t *obj, isn_msg_table_t* messages, uint8_t size, i
     obj->handler_priority = 0;
     obj->pending = 1;
     obj->msgnum = 0;
+    obj->tx_dropped = 0;
+    obj->tx_packets = 0;
     isn_msg_self = obj;
 }
 
