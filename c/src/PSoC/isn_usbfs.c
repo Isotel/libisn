@@ -29,6 +29,46 @@
 
 /**\{ */
 
+/**
+ * NB! PSOC Creator ignore custom setting of the USBFS ARB PRIORITY interrupt
+ * and set it to 0 (highest). See generated USBFS.h USBFS_ARB_PRIOR.
+ *
+ * We should set it to less than our high priority interrupt, for example ADC ISR
+ * channel switching in multichannel configuration.
+ *
+ * NB!!! USBFS ARB PRIORITY must be higher (numerically less)
+ * than ANY other USBFS EPx interrupt priorities (7 by default).
+ */
+#define CUSTOM_USBFS_ARB_PRIORITY   5
+
+#if defined(USBFS_ep_0__INTC_PRIOR_NUM) && USBFS_ep_0__INTC_PRIOR_NUM <= CUSTOM_USBFS_ARB_PRIORITY
+#error EP0 interrupt priority must be lower than ARB interrupt priority
+#endif
+#if defined(USBFS_ep_1__INTC_PRIOR_NUM) && USBFS_ep_1__INTC_PRIOR_NUM <= CUSTOM_USBFS_ARB_PRIORITY
+#error EP1 interrupt priority must be lower than ARB interrupt priority
+#endif
+#if defined(USBFS_ep_2__INTC_PRIOR_NUM) && USBFS_ep_2__INTC_PRIOR_NUM <= CUSTOM_USBFS_ARB_PRIORITY
+#error EP2 interrupt priority must be lower than ARB interrupt priority
+#endif
+#if defined(USBFS_ep_3__INTC_PRIOR_NUM) && USBFS_ep_3__INTC_PRIOR_NUM <= CUSTOM_USBFS_ARB_PRIORITY
+#error EP3 interrupt priority must be lower than ARB interrupt priority
+#endif
+#if defined(USBFS_ep_4__INTC_PRIOR_NUM) && USBFS_ep_4__INTC_PRIOR_NUM <= CUSTOM_USBFS_ARB_PRIORITY
+#error EP4 interrupt priority must be lower than ARB interrupt priority
+#endif
+#if defined(USBFS_ep_5__INTC_PRIOR_NUM) && USBFS_ep_2__INTC_PRIOR_NUM <= CUSTOM_USBFS_ARB_PRIORITY
+#error EP2 interrupt priority must be lower than ARB interrupt priority
+#endif
+#if defined(USBFS_ep_6__INTC_PRIOR_NUM) && USBFS_ep_6__INTC_PRIOR_NUM <= CUSTOM_USBFS_ARB_PRIORITY
+#error EP6 interrupt priority must be lower than ARB interrupt priority
+#endif
+#if defined(USBFS_ep_7__INTC_PRIOR_NUM) && USBFS_ep_7__INTC_PRIOR_NUM <= CUSTOM_USBFS_ARB_PRIORITY
+#error EP7 interrupt priority must be lower than ARB interrupt priority
+#endif
+#if defined(USBFS_ep_8__INTC_PRIOR_NUM) && USBFS_ep_8__INTC_PRIOR_NUM <= CUSTOM_USBFS_ARB_PRIORITY
+#error EP8 interrupt priority must be lower than ARB interrupt priority
+#endif
+
 /** OUT EP in USB therminology (EP that receives data from the host) */
 #define USB_RECV_EP     1
 
@@ -121,6 +161,7 @@ void isn_usbfs_init(isn_usbfs_t *obj, int mode, isn_layer_t* child) {
     obj->next_send_ep = USB_SEND_EPst; /** first free EP */
 
     USBFS_Start(0u, mode);
+    CyIntSetPriority(USBFS_ARB_VECT_NUM, CUSTOM_USBFS_ARB_PRIORITY);
     while (0u == USBFS_GetConfiguration()) {}
     USBFS_EnableOutEP(USB_RECV_EP);
 }
