@@ -35,7 +35,7 @@ volatile uint32_t counter1k = 0;    // This should increment at rate of 1 kHz, m
 #endif
 int main(int argc, char* argv[]) {
     isn_frame_t isn_frame;
-    isn_loopback_t isn_fw2udp, isn_fw2serial;
+    isn_redirect_t isn_fw2udp, isn_fw2serial;
 
     uint16_t serverport = ISN_UDP_DEFAULT_SERVERPORT;
     const char* serial_port = NULL;
@@ -70,7 +70,7 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
-    isn_frame_init(&isn_frame, ISN_FRAME_MODE_COMPACT, isn_fw2udp, NULL, isn_serial_driver, &counter1k, 100);
+    isn_frame_init(&isn_frame, ISN_FRAME_MODE_COMPACT, &isn_fw2udp, NULL, isn_serial_driver, &counter1k, 100);
 
     isn_redirect_init(&isn_fw2udp, isn_udp_driver);
     isn_redirect_init(&isn_fw2serial, &isn_frame);
