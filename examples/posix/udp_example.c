@@ -59,9 +59,9 @@ static void* counter_cb(const void* data) {
 }
 
 // Triggers every second by IDM unless this device is sending other data
-const void* ping_recv(isn_layer_t* drv, const void* src, size_t size, isn_driver_t* caller) {
+size_t ping_recv(isn_layer_t* drv, const void* src, size_t size, isn_driver_t* caller) {
     isn_msg_sendby(&isn_message, counter_cb, ISN_MSG_PRI_NORMAL);
-    return src;
+    return size;
 }
 
 static isn_msg_table_t isn_msg_table[] = {
