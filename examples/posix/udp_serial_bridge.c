@@ -36,34 +36,65 @@ volatile uint32_t counter1k = 0;    // This should increment at rate of 1 kHz, m
 int main(int argc, char* argv[]) {
     isn_frame_t isn_frame;
     isn_redirect_t isn_fw2udp, isn_fw2serial;
+    isn_serial_driver_params_t serial_parameters = isn_serial_driver_default_params;
 
-    uint16_t serverport = ISN_UDP_DEFAULT_SERVERPORT;
+    uint16_t server_port = ISN_UDP_DEFAULT_SERVERPORT;
     const char* serial_port = NULL;
+    int trace_serial_port = 0;
     int opt;
 
-    while ((opt = getopt(argc, argv, "hp:s:")) != -1) {
+    while ((opt = getopt(argc, argv, "hp:s:l:t")) != -1) {
         switch (opt) {
             case 's':
                 serial_port = optarg;
                 break;
             case 'p':
-                serverport = atoi(optarg);
+                server_port = atoi(optarg);
                 break;
+            case 'l': {
+                char parity;
+                int cnt = sscanf(optarg, "%d:%1d:%1[NEO]:%1d",
+                                 &serial_parameters.baud_rate, &serial_parameters.data_bits,
+                                 &parity, &serial_parameters.stop_bits);
+                if (cnt != 4) {
+                    fprintf(stderr, "invalid serial parameters specified: [%s]\n", optarg);
+                    exit(EXIT_FAILURE);
+                }
+                if (parity == 'N') {
+                    serial_parameters.parity = ISN_PARITY_NONE;
+                } else if (parity == 'E') {
+                    serial_parameters.parity = ISN_PARITY_EVEN;
+                } else if (parity == 'O') {
+                    serial_parameters.parity = ISN_PARITY_ODD;
+                }
+                break;
+            }
+            case 't':
+                trace_serial_port = 1;
+                break;
+
             default:
-                fprintf(stdout, "usage: %s [-p port] [-s serial]\n", argv[0]);
+                fprintf(stdout, "usage: %s [-t trace serial calls] [-p port default: %d] -s serial\n"
+                                "[-l serial port parameters speed:len:parity{NEO}:stop_bits, default: 115200:8:N:1]\n",
+                        argv[0], server_port);
                 exit(EXIT_FAILURE);
         }
     }
+    if(serial_port == NULL) {
+        fprintf(stderr, "serial port must be specified\n");
+        exit(EXIT_FAILURE);
+    }
 
     isn_udp_driver_setlogging(ISN_LOGGER_LOG_LEVEL_DEBUG);
-    isn_udp_driver_t* isn_udp_driver = isn_udp_driver_create(serverport, &isn_fw2serial, 0);
+    isn_udp_driver_t* isn_udp_driver = isn_udp_driver_create(server_port, &isn_fw2serial, 0);
     if (!isn_udp_driver) {
         fprintf(stderr, "unable to initialize UDP driver: %s, exiting\n",
                 strerror(-errno));
         exit(1);
     }
 
-    isn_serial_driver_t* isn_serial_driver = isn_serial_driver_create(serial_port, NULL, &isn_frame);
+    isn_serial_driver_setlogging(trace_serial_port ? ISN_LOGGER_LOG_LEVEL_TRACE : ISN_LOGGER_LOG_LEVEL_DEBUG);
+    isn_serial_driver_t* isn_serial_driver = isn_serial_driver_create(serial_port, &serial_parameters, &isn_frame);
     if (!isn_serial_driver) {
         fprintf(stderr, "unable to initialize serial driver: %s, exiting\n",
                 strerror(-errno));
