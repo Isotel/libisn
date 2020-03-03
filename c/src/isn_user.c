@@ -46,8 +46,9 @@ static size_t isn_user_recv(isn_layer_t *drv, const void *src, size_t size, isn_
     isn_user_t *obj = (isn_user_t *)drv;
     const uint8_t *buf = src;
     if (*buf == obj->user_id) {
-        obj->rx_counter+=size-1;
-        return obj->child->recv(obj->child, buf+1, size-1, drv) + 1;
+        size_t passed = obj->child->recv(obj->child, buf+1, size-1, drv) + 1;
+        if (passed > 0) obj->rx_counter += passed-1;    // Only account passed data to avoid retries
+        return passed;
     }
     return 0;
 }
