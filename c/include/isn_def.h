@@ -201,6 +201,7 @@ extern "C" {
 #define ISN_PROTO_MSG       0x7F
 #define ISN_PROTO_TRANS     0x7E
 #define ISN_PROTO_TRANL     0x7D
+#define ISN_PROTO_XXTEA     0x7C
 
 #define ISN_PROTO_USERMAX   ISN_PROTO_USER15
 #define ISN_PROTO_USER15    0x0f

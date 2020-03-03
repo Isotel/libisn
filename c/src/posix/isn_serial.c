@@ -66,7 +66,7 @@ static char* hex_dump(const unsigned char* buffer, size_t size) {
     return strbuf;
 }
 
-static int get_send_buf(isn_layer_t* drv, void** buf, size_t size) {
+static int get_send_buf(isn_layer_t* drv, void** buf, size_t size, isn_layer_t* caller) {
     isn_serial_driver_t* const driver = (isn_serial_driver_t*) drv;
 
     if (!driver->buf_locked) {
@@ -142,6 +142,8 @@ static int send_buf(isn_layer_t* drv, void* buf, size_t sz) {
 static int isn_serial_driver_init(isn_serial_driver_t* driver, const char* port,
                                   const isn_serial_driver_params_t* params,
                                   isn_layer_t* child) {
+    assert(params->data_bits >= 5 && params->data_bits <= 8);
+    assert(params->stop_bits == 1 || params->stop_bits == 2);
 #ifdef _WIN32
     char buf[128];
     if (snprintf(buf, sizeof(buf), "\\\\.\\%s", port) == -1) {
@@ -167,7 +169,6 @@ static int isn_serial_driver_init(isn_serial_driver_t* driver, const char* port,
 
     dcb.BaudRate = params->baud_rate;
 
-    assert(params->data_bits >= 5 && params->data_bits <= 8);
     dcb.ByteSize = params->data_bits;
 
     switch (params->flow_control) {
@@ -202,7 +203,6 @@ static int isn_serial_driver_init(isn_serial_driver_t* driver, const char* port,
             dcb.Parity = EVENPARITY;
             break;
     }
-    assert(params->stop_bits == 1 || params->stop_bits == 2);
     dcb.StopBits = params->stop_bits;
     if (SetCommState(driver->port_handle, &dcb) == 0) {
         LOG_FATAL(isn_logger_level, "unable to set state of the serial port %s [%lu]", port, GetLastError())
@@ -224,9 +224,33 @@ static int isn_serial_driver_init(isn_serial_driver_t* driver, const char* port,
         LOG_FATAL(isn_logger_level, "unable to set exclusive port access ioctl(TIOCEXCL) [%s]", strerror(errno));
         return -1;
     }
+
     struct termios tios = {
-        .c_cflag = CS8 | CREAD | CLOCAL,
+            .c_cflag = CREAD | CLOCAL,
     };
+    switch (params->data_bits) {
+        case 5:
+            tios.c_cflag |= CS5;
+            break;
+        case 6:
+            tios.c_cflag |= CS6;
+            break;
+        case 7:
+            tios.c_cflag |= CS7;
+            break;
+        case 8:
+            tios.c_cflag |= CS8;
+            break;
+    }
+    if (params->parity == ISN_PARITY_EVEN) {
+        tios.c_cflag |= PARENB;
+    } else if (params->parity == ISN_PARITY_ODD) {
+        tios.c_cflag |= PARENB | PARODD;
+    }
+    if (params->flow_control == ISN_FLOW_CONTROL_HARDWARE) {
+        tios.c_cflag |= CRTSCTS;
+    }
+
     const speed_t speed = baud_rate_value_to_enum(params->baud_rate);
     if(speed == 0) {
         LOG_FATAL(isn_logger_level, "specified speed %d is invalid", params->baud_rate);

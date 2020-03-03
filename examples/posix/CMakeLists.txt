@@ -4,6 +4,7 @@ set(LIB_ISN_SOURCES
         ${LIB_ISN_SOURCES_DIR}/isn_dispatch.c
         ${LIB_ISN_SOURCES_DIR}/isn_msg.c
         ${LIB_ISN_SOURCES_DIR}/isn_frame.c
+        ${LIB_ISN_SOURCES_DIR}/isn_redirect.c
         ${LIB_ISN_SOURCES_DIR}/posix/isn_udp.c
         ${LIB_ISN_SOURCES_DIR}/posix/isn_serial.c
 )
@@ -14,20 +15,16 @@ if (MSVC)
     add_compile_options(/wd4996 /wd4267 /wd4244)
 endif ()
 
-add_executable(udp_example udp_example.c ${LIB_ISN_SOURCES})
-target_include_directories(udp_example PRIVATE ${LIB_ISN_INCLUDE_DIR})
-if (WIN32)
-    target_link_libraries(udp_example PRIVATE ws2_32)
-endif()
+function(CONFIGURE_EXECUTABLE E_NAME)
+    add_executable(${E_NAME} ${ARGN} ${LIB_ISN_SOURCES})
+    target_include_directories(${E_NAME} PRIVATE ${LIB_ISN_INCLUDE_DIR})
+    if (WIN32)
+        target_link_libraries(${E_NAME} PRIVATE ws2_32)
+    endif()
+endfunction()
+
 #
-add_executable(udp_host udp_host.c ${LIB_ISN_SOURCES})
-target_include_directories(udp_host PRIVATE ${LIB_ISN_INCLUDE_DIR})
-if (WIN32)
-    target_link_libraries(udp_host PRIVATE ws2_32)
-endif()
-#
-add_executable(serial_host serial_host.c ${LIB_ISN_SOURCES})
-target_include_directories(serial_host PRIVATE ${LIB_ISN_INCLUDE_DIR})
-if (WIN32)
-    target_link_libraries(serial_host PRIVATE ws2_32)
-endif()
+configure_executable(udp_example udp_example.c)
+configure_executable(udp_host udp_host.c)
+configure_executable(serial_host serial_host.c)
+configure_executable(udp_serial_bridge udp_serial_bridge.c)

@@ -2,7 +2,7 @@
  *  \brief ISN Short and Compact (with CRC) Frame Protocol up to 64 B frames Implementation
  *  \author Uros Platise <uros@isotel.eu>
  *  \see isn_frame.h
- * 
+ *
  * \cond Implementation
  * \addtogroup GR_ISN_Frame
  */
@@ -10,7 +10,7 @@
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- * 
+ *
  * (c) Copyright 2019, Isotel, http://isotel.eu
  */
 
@@ -77,6 +77,11 @@ static int isn_frame_send(isn_layer_t *drv, void *dest, size_t size) {
 #define IS_NONE         0
 #define IS_IN_MESSAGE   1
 
+#define FORWARD_MSG     \
+        if (obj->child->recv(obj->child, obj->recv_buf, obj->recv_size, drv) != obj->recv_size) {   \
+            if (obj->other) obj->other->recv(obj->other, obj->recv_buf, obj->recv_size, caller);    \
+        }
+
 static size_t isn_frame_recv(isn_layer_t *drv, const void *src, size_t size, isn_layer_t *caller) {
     isn_frame_t *obj = (isn_frame_t *)drv;
     const uint8_t *buf = src;
@@ -112,7 +117,7 @@ static size_t isn_frame_recv(isn_layer_t *drv, const void *src, size_t size, isn
             case IS_IN_MESSAGE: {
                 if (obj->recv_size == obj->recv_len && obj->crc_enabled) {
                     if (*buf == obj->crc) {
-                        obj->child->recv(obj->child, obj->recv_buf, obj->recv_size, drv);
+                        FORWARD_MSG;
                         obj->rx_frames++;
                     }
                     else {
@@ -127,7 +132,7 @@ static size_t isn_frame_recv(isn_layer_t *drv, const void *src, size_t size, isn
                         obj->crc = crc8(obj->crc ^ *buf);
                     }
                     else if (obj->recv_size == obj->recv_len) {
-                        obj->child->recv(obj->child, obj->recv_buf, obj->recv_size, drv);
+                        FORWARD_MSG;
                         obj->recv_size = obj->recv_len = 0;
                         obj->state = IS_NONE;
                         obj->rx_frames++;
