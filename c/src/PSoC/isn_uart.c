@@ -93,7 +93,7 @@ static void isn_uart_free(isn_layer_t *drv, const void *ptr) {
 
 static int isn_uart_send(isn_layer_t *drv, void *dest, size_t size) {
     isn_uart_t *obj = (isn_uart_t *)drv;
-    assert(size <= TXBUF_SIZE);
+    assert(size <= UART_TXBUF_SIZE);
     while( !UART_TX_is_ready(size) );   // todo: timeout assert
     UART_PutArray(dest, size);
     isn_uart_free(drv, dest);           // free buffer, however need to block use of buffer until sent out
