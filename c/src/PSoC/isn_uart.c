@@ -20,7 +20,7 @@
  * (c) Copyright 2019, Isotel, http://isotel.eu
  */
 
-
+#include <string.h>
 #include "project.h"
 #include "PSoC/isn_uart.h"
 
