@@ -119,10 +119,12 @@ static void isn_usbfs_free(isn_layer_t *drv, const void *ptr) {
 }
 
 static int isn_usbfs_send(isn_layer_t *drv, void *dest, size_t size) {
-    assert(size <= TXBUF_SIZE);
     isn_usbfs_t *obj = (isn_usbfs_t *)drv;
-    USBFS_LoadInEP(obj->buf_locked, dest, size);
-    //if (++obj->next_send_ep > USB_SEND_EPend) obj->next_send_ep = USB_SEND_EPst;
+    assert(size <= TXBUF_SIZE);
+    if (size) {
+        USBFS_LoadInEP(obj->buf_locked, dest, size);
+        //if (++obj->next_send_ep > USB_SEND_EPend) obj->next_send_ep = USB_SEND_EPst;
+    }
     isn_usbfs_free(drv, dest);
     return size;
 }

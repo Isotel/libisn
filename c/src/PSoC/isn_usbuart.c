@@ -54,8 +54,10 @@ static void isn_usbuart_free(isn_layer_t *drv, const void *ptr) {
 
 static int isn_usbuart_send(isn_layer_t *drv, void *dest, size_t size) {
     assert(size <= TXBUF_SIZE);
-    while( !USBUART_CDCIsReady() ); // todo: timeout assert
-    USBUART_PutData(dest, size);
+    if (size) {
+        while( !USBUART_CDCIsReady() ); // todo: timeout assert
+        USBUART_PutData(dest, size);
+    }
     isn_usbuart_free(drv, dest);    // free buffer, however need to block use of buffer until sent out
     return size;
 }
