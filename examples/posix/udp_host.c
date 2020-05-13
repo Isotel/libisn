@@ -49,7 +49,7 @@ counter_t counter = { 0 };
 static void* serial_cb(const void* data) {
     if (data) {
         serial = *(const uint64_t*) data;
-        printf("Received serial: %llx\n", serial);
+        printf("Received serial: %lx\n", serial);
         return NULL; // we do not return values as we ask the peer for it
     }
     return &serial;
@@ -124,11 +124,10 @@ int main(int argc, char* argv[]) {
             isn_msg_send(&isn_message, 1, ISN_MSG_PRI_QUERY_ARGS);
             active = new_active;
         }
-        if (isn_msg_sched(&isn_message) > 0)
-            count = 0;
+        if (isn_msg_sched(&isn_message) > 0) count = 0;
 
         // Emulate ping and ask for some message
-        if (++count > 110) {
+        if (active) if (++count > 110) {   
             isn_msg_send(&isn_message, 1, ISN_MSG_PRI_QUERY_ARGS);
             printf("Ping\n");
             count = 0;
