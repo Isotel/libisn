@@ -20,6 +20,7 @@ Suggested reading:
 - \ref GR_ISN_User
 - \ref GR_ISN_Dispatch
 - \ref GR_ISN_Redirect
+- \ref GR_ISN_Dup
 
 POSIX Support:
 

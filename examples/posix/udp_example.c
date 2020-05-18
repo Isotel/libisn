@@ -108,8 +108,9 @@ int main(int argc, char* argv[]) {
     isn_msg_init(&isn_message, isn_msg_table, ARRAY_SIZE(isn_msg_table), isn_udp_driver);
 
     // add client and send at least one, the first message, to establish connection
-    // Number of other clients may in addition connect to this udp server to the given port
-    isn_udp_driver_addclient(isn_udp_driver, "255.255.255.255", "33005");
+    // Number of other clients may in addition connect to this udp server to the given port    
+    //isn_udp_driver_addclient(isn_udp_driver, "255.255.255.255", "33005"); // add this line the device will connect to all IDMs in network
+    isn_udp_driver_addclient(isn_udp_driver, "localhost", "33005");         // or add this line to connect to specific only
     isn_msg_sendby(&isn_message, counter_cb, ISN_MSG_PRI_NORMAL);
 
     while (1) {
