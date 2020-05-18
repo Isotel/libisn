@@ -315,6 +315,11 @@ typedef void* (* isn_events_handler_t)(const void* arg);
 #endif
 #endif
 
+#ifndef __STRINGIFY0
+# define __STRINGIFY0(_P) #_P
+# define __STRY(_P) __STRINGIFY0(_P)
+#endif
+
 #ifdef __cplusplus
 }
 #endif
