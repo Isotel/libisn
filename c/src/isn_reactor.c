@@ -153,6 +153,14 @@ int isn_reactor_change_timed(int index, const isn_reactor_tasklet_t tasklet, con
     return retval;
 }
 
+int isn_reactor_drop(int index, const isn_reactor_tasklet_t tasklet, const void* arg) {
+    critical_section_state_t state = critical_section_enter();
+    int retval = isn_reactor_isvalid(index, tasklet, arg);
+    if (retval) queue_table[index].tasklet = NULL;
+    critical_section_exit(state);
+    return retval;
+}
+
 #ifdef REQUIRES_BUGFIX
 int isn_reactor_dropall(const isn_reactor_tasklet_t tasklet, const void* arg) {
     int removed = 0;
@@ -203,7 +211,11 @@ int isn_reactor_step(void) {
                 if (time_to_exec <= 0) {
                     isn_reactor_tasklet_t tasklet = QUEUE_FUNC_ADDR(j);
                     _isn_reactor_active_timestamp = queue_table[j].time;
-                    const void *retval = tasklet( (const void *)queue_table[j].arg );
+
+                    const void *retval = NULL;
+                    if (tasklet) {
+                        retval = tasklet( (const void *)queue_table[j].arg );
+                    }
                     if  (queue_table[j].caller ) {
                         queue_table[j].caller( tasklet, (const void *)queue_table[j].arg, retval );
                     }

@@ -103,6 +103,11 @@ int isn_reactor_isvalid(int index, const isn_reactor_tasklet_t tasklet, const vo
  */
 int isn_reactor_change_timed(int index, const isn_reactor_tasklet_t tasklet, const void* arg, isn_reactor_time_t newtime);
 
+/** Drop specific tasklet
+ * \returns 0 if no-longer in queue or invalid index, and 1 when modified successfully
+ */
+int isn_reactor_drop(int index, const isn_reactor_tasklet_t tasklet, const void* arg);
+
 /** Drop tasklets from queue of given tasklet and arg
  *  \returns number of removed tasklets
  */
