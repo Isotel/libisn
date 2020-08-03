@@ -20,7 +20,7 @@
 
 /**\{ */
 
-static int isn_trans_getsendbuf(isn_layer_t *drv, void **dest, size_t size, isn_layer_t *caller) {
+static int isn_trans_getsendbuf(isn_layer_t *drv, void **dest, size_t size, const isn_layer_t *caller) {
     isn_trans_t *obj = (isn_trans_t *)drv;
     int osize = obj->parent->getsendbuf(obj->parent, dest, size+PROTO_SIZE, drv);
     uint8_t **buf = (uint8_t **)dest;

@@ -85,7 +85,7 @@ static isn_layer_t * inep_reservation[7] = {NULL, NULL, NULL, NULL, NULL, NULL, 
  *
  * \returns desired or limited (max) size in the case desired size is too big
  */
-static int isn_usbfs_getsendbuf(isn_layer_t *drv, void **dest, size_t size, isn_layer_t *caller) {
+static int isn_usbfs_getsendbuf(isn_layer_t *drv, void **dest, size_t size, const isn_layer_t *caller) {
     isn_usbfs_t *obj = (isn_usbfs_t *)drv;
 
     if (!obj->buf_locked) {

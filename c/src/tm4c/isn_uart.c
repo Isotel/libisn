@@ -43,7 +43,7 @@ unsigned char UART_PutArray(uint8_t* dest,uint8_t size,uint32_t base,uint32_t uD
  * 
  * \returns desired or limited (max) size in the case desired size is too big
  */
-static int isn_uart_getsendbuf(isn_layer_t *drv, void **dest, size_t size, isn_layer_t *caller) {
+static int isn_uart_getsendbuf(isn_layer_t *drv, void **dest, size_t size, const isn_layer_t *caller) {
     isn_uart_t *obj = (isn_uart_t *)drv;
     if ((!uDMAChannelIsEnabled(obj->DMAtx)) && !obj->buf_locked) {
         if (dest) {

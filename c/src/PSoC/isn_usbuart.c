@@ -30,7 +30,7 @@
  * 
  * \returns desired or limited (max) size in the case desired size is too big
  */
-static int isn_usbuart_getsendbuf(isn_layer_t *drv, void **dest, size_t size, isn_layer_t *caller) {
+static int isn_usbuart_getsendbuf(isn_layer_t *drv, void **dest, size_t size, const isn_layer_t *caller) {
     isn_usbuart_t *obj = (isn_usbuart_t *)drv;
     if (USBUART_CDCIsReady() && !obj->buf_locked) {
         if (dest) {

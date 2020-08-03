@@ -18,7 +18,7 @@
 
 /**\{ */
 
-static int isn_user_getsendbuf(isn_layer_t *drv, void **dest, size_t size, isn_layer_t *caller) {
+static int isn_user_getsendbuf(isn_layer_t *drv, void **dest, size_t size, const isn_layer_t *caller) {
     isn_user_t *obj = (isn_user_t *)drv;
     int osize = obj->parent->getsendbuf(obj->parent, dest, size+1, drv);
     uint8_t **buf = (uint8_t **)dest;

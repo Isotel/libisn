@@ -256,7 +256,7 @@ typedef struct isn_driver_s {
      * \param caller reference, typ used for QoS
      * \returns obtained size, and buf pointer is set; if size cannot be obtained buf is (must be) set to NULL
      */
-    int (*getsendbuf)(isn_layer_t *drv, void **dest, size_t size, isn_layer_t *caller);
+    int (*getsendbuf)(isn_layer_t *drv, void **dest, size_t size, const isn_layer_t *caller);
 
     /** Send Data
      *

@@ -69,7 +69,7 @@ static int UART_TX_is_ready(size_t size) {
  *
  * \returns desired or limited (max) size in the case desired size is too big
  */
-static int isn_uart_getsendbuf(isn_layer_t *drv, void **dest, size_t size, isn_layer_t *caller) {
+static int isn_uart_getsendbuf(isn_layer_t *drv, void **dest, size_t size, const isn_layer_t *caller) {
     isn_uart_t *obj = (isn_uart_t *)drv;
     if (UART_TX_is_ready(size) && !obj->buf_locked) {
         if (dest) {
