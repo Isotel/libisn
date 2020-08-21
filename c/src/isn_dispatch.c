@@ -18,7 +18,7 @@
 
 /**\{ */
 
-static size_t isn_dispatch_recv(isn_layer_t *drv, const void *buf, size_t size, isn_driver_t *caller) {
+static size_t isn_dispatch_recv(isn_layer_t *drv, const void *buf, size_t size, isn_layer_t *caller) {
     isn_dispatch_t *obj = (isn_dispatch_t *)drv;
     isn_bindings_t *child = obj->childs;
     int protocol = *(const uint8_t *)buf;

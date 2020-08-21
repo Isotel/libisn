@@ -38,7 +38,7 @@ extern "C"
  * \param size
  * \returns result from the layer send() method, or -1 on insufficient buffer availabilty
  */
-int isn_write(isn_driver_t *layer, const void *src, size_t size);
+int isn_write(isn_layer_t *layer, const void *src, size_t size);
 
 #ifdef __cplusplus
 }

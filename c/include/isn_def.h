@@ -283,7 +283,7 @@ isn_driver_t;
  * ISN Layer Receiver only
  */
 typedef struct {
-    size_t (*recv)(isn_layer_t *drv, const void *buf, size_t size, isn_driver_t *caller);
+    size_t (*recv)(isn_layer_t *drv, const void *buf, size_t size, isn_layer_t *caller);
 }
 isn_receiver_t;
 

@@ -19,13 +19,14 @@
 
 /**\{ */
 
-int isn_write(isn_driver_t *layer, const void *src, size_t size) {
+int isn_write(isn_layer_t *layer, const void *src, size_t size) {
     void *buf;
-    if (layer->getsendbuf(layer, &buf, size, layer) == size) {
+    isn_driver_t *drv = (isn_driver_t *)layer;
+    if (drv->getsendbuf(drv, &buf, size, drv) == size) {
         memcpy(buf, src, size);
-        return layer->send(layer, buf, size);
+        return drv->send(drv, buf, size);
     }
-    layer->free(layer, buf);
+    drv->free(drv, buf);
     return -1;
 }
 

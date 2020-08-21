@@ -155,7 +155,7 @@ uint8_t isn_msg_resend_queries(isn_message_t *obj) {
  * data at a time until sendnext() sends reply. However we may handle
  * multiple requests for data since they don't provide any input data.
  */
-static size_t isn_message_recv(isn_layer_t *drv, const void *src, size_t size, isn_driver_t *caller) {
+static size_t isn_message_recv(isn_layer_t *drv, const void *src, size_t size, isn_layer_t *caller) {
     isn_message_t *obj = (isn_message_t *)drv;
     const uint8_t *buf = src;
     uint8_t data_size = size - 2;

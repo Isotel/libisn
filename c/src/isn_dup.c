@@ -30,7 +30,7 @@
 
 /**\{ */
 
-static size_t isn_dup_recv(isn_layer_t *drv, const void *buf, size_t size, isn_driver_t *caller) {
+static size_t isn_dup_recv(isn_layer_t *drv, const void *buf, size_t size, isn_layer_t *caller) {
     isn_dup_t *obj = (isn_dup_t *)drv;
     size_t recv1 = obj->childs[0]->recv(obj->childs[0], buf, size, caller);
     size_t recv2 = obj->childs[1]->recv(obj->childs[1], buf, size, caller);
