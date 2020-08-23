@@ -47,9 +47,11 @@ static int isn_msg_sendnext(isn_message_t *obj) {
 	for (uint8_t i = 0; i < obj->isn_msg_table_size; obj->msgnum++, i++) {
 		if (obj->msgnum >= obj->isn_msg_table_size) obj->msgnum = 0;
 		if (obj->isn_msg_table[obj->msgnum].priority > 0) {
+
             // If it is locked in a query wait state then we want to unlock it (proceed) only if data is provided
-            if (obj->isn_msg_table[obj->msgnum].priority != ISN_MSG_PRI_QUERY_WAIT ||
-                obj->msgnum == obj->isn_msg_received_msgnum) {
+            // Even if locked, keep through other messages to free input recive buffer
+            if ( (obj->isn_msg_table[obj->msgnum].priority != ISN_MSG_PRI_QUERY_WAIT && !obj->lock) ||
+                     obj->msgnum == obj->isn_msg_received_msgnum) {
                 picked = &obj->isn_msg_table[obj->msgnum];
                 break;
             }
@@ -57,6 +59,10 @@ static int isn_msg_sendnext(isn_message_t *obj) {
 	}
     if (picked) {
         isn_msg_self = obj;
+
+        // Set and release locks
+        if (obj->isn_msg_received_msgnum == obj->lock) obj->lock = 0;
+        else if (picked->priority == ISN_MGG_PRI_UPDATE_ARGS) obj->lock = obj->msgnum;
 
         if (picked->priority >= ISN_MSG_PRI_DESCRIPTIONLOW) {
             send_packet(obj, (uint8_t)0x80 | obj->msgnum, picked->desc, strlen(picked->desc));
@@ -139,6 +145,11 @@ uint8_t isn_msg_sendqby(isn_message_t *obj, isn_events_handler_t hnd, uint8_t pr
 
 uint8_t isn_msg_resend_queries(isn_message_t *obj) {
     uint8_t count = 0;
+    if (obj->lock) {
+        obj->isn_msg_table[obj->lock].priority = ISN_MGG_PRI_UPDATE_ARGS;
+        obj->lock = 0;
+        count++;
+    }
 	for (uint8_t msgnum = 0; msgnum < obj->isn_msg_table_size; msgnum++) {
         if (obj->isn_msg_table[msgnum].priority == ISN_MSG_PRI_QUERY_WAIT) {
             obj->isn_msg_table[msgnum].priority = ISN_MSG_PRI_QUERY_ARGS;
@@ -186,7 +197,7 @@ static size_t isn_message_recv(isn_layer_t *drv, const void *src, size_t size, i
     }
     isn_msg_post(obj, msgnum, (uint8_t) (buf[1] & 0x80 ? ISN_MSG_PRI_DESCRIPTION : ISN_MSG_PRI_HIGHEST));
     obj->msgnum = msgnum;   // speed-up response time to all incoming request and to release incoming buffer
-    
+
     return size;
 }
 
@@ -212,6 +223,7 @@ void isn_msg_init(isn_message_t *obj, isn_msg_table_t* messages, uint8_t size, i
     obj->handler_msgnum = -1;
     obj->handler_priority = 0;
     obj->pending = 1;
+    obj->lock = 0;
     obj->msgnum = 0;
     obj->tx_dropped = 0;
     obj->tx_packets = 0;

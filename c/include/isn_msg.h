@@ -201,6 +201,7 @@ extern "C" {
 //#define ISN_MSG_PRI_QUERY_DESC    28      ///< Request for description, NOT SUPPORTED YET
 #define ISN_MSG_PRI_QUERY_ARGS      27      ///< Request for arguments
 #define ISN_MSG_PRI_QUERY_WAIT      26      ///< Wait for reply
+#define ISN_MGG_PRI_UPDATE_ARGS     25      ///< Send an update and block further transmission
 #define ISN_MSG_PRI_HIGHEST         0x0f    ///< When other peer requests args, these are send with this priority
 #define ISN_MSG_PRI_HIGH            0x08
 #define ISN_MSG_PRI_NORMAL          0x04
@@ -242,6 +243,7 @@ typedef struct {
     uint8_t handler_priority;
     uint8_t pending;
     uint8_t msgnum;                             ///< Last msgnum sent
+    uint8_t lock;                               ///< Lock, to prevent sending further messages, when waiting for ack (reply)
 }
 isn_message_t;
 
