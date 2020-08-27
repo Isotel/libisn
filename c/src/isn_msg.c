@@ -68,6 +68,11 @@ static int isn_msg_sendnext(isn_message_t *obj) {
             send_packet(obj, (uint8_t)0x80 | obj->msgnum, picked->desc, strlen(picked->desc));
             picked->priority = (obj->msgnum == obj->isn_msg_received_msgnum) ? ISN_MSG_PRI_HIGHEST : ISN_MSG_PRI_LOW;
         }
+        // a message without args cannot be sent as args, but only desc (first if)
+        else if (picked->size == 0) {
+            picked->priority = ISN_MSG_PRI_CLEAR;
+            obj->tx_dropped++;
+        }
         // Note that the message we're asking for is just arriving, and for messages without
         // any handler, we reply back with query, but we do not block the message.
         else if (picked->handler == NULL || (picked->priority == ISN_MSG_PRI_QUERY_ARGS && obj->msgnum != obj->isn_msg_received_msgnum)) {

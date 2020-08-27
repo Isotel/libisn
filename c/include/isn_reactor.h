@@ -81,10 +81,10 @@ isn_reactor_mutex_t isn_reactor_getmutex();
 int isn_reactor_mutexqueue(const isn_reactor_tasklet_t tasklet, const void* arg, isn_reactor_mutex_t mutex_bits);
 
 /** Lock given mutex bit(s), one or more at the same time, which will stop execution of tasklets in the same mutex group */
-void isn_reactor_mutex_lock(isn_reactor_mutex_t mutex_bits);
+uint32_t isn_reactor_mutex_lock(isn_reactor_mutex_t mutex_bits);
 
 /** Unlock mutex bits */
-void isn_reactor_mutex_unlock(isn_reactor_mutex_t mutex_bits);
+uint32_t isn_reactor_mutex_unlock(isn_reactor_mutex_t mutex_bits);
 
 /** \returns non-zero if locked */
 uint32_t isn_reactor_mutex_is_locked(isn_reactor_mutex_t mutex_bits);

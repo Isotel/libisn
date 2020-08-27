@@ -52,11 +52,33 @@
 #include <project.h>                // Currently supported/tested on PSoC5 only
 #include "isn_reactor.h"
 
-#define QUEUE_LINK(i,j)             queue_table[i].tasklet = (void *)(((uint32_t)(queue_table[i].tasklet) & 0x00FFFFFF) | ((j)<<24))
-#define QUEUE_LINKANDCLEAR(i, j)    queue_table[i].tasklet = (void *)((j)<<24)
-#define QUEUE_NEXT(i)               (((uint32_t)(queue_table[i].tasklet) & 0xFF000000) >> 24)
-#define QUEUE_FUNC_ADDR(i)          (void *)((uint32_t)(queue_table[i].tasklet) & 0x0003FFFF)
-#define QUEUE_MUTEX(i)              ((uint32_t)(queue_table[i].tasklet) & 0x00FC0000)
+#if(CYDEV_CHIP_FAMILY_USED == CYDEV_CHIP_FAMILY_PSOC4)
+# error "PSoC4 has not been yet verified and supported"
+#elif(CYDEV_CHIP_FAMILY_USED == CYDEV_CHIP_FAMILY_PSOC5)
+# warning "Experimental optimizations in mutexes and queue linking"
+# define MUTEX_SHIFT                20
+# define MUTEX_COUNT                4
+# define MUTEX_MASK                 0xF
+# define FUNC_ADDR_MASK             0x0003FFFF
+# define INDEX_SHIFT                24
+# define QUEUE_FUNC_ADDR(i)         (void *)((uint32_t)(queue_table[i].tasklet) & FUNC_ADDR_MASK)
+#elif(CYDEV_CHIP_FAMILY_USED == CYDEV_CHIP_FAMILY_PSOC6)
+# warning "Experimental support of reactor"
+# define MUTEX_SHIFT                28
+# define MUTEX_COUNT                4
+# define MUTEX_MASK                 0xF
+# define FUNC_ADDR_MASK             0x000FFFFF
+# define INDEX_SHIFT                20
+# define QUEUE_FUNC_ADDR(i)         (void *)(((uint32_t)(queue_table[i].tasklet) & FUNC_ADDR_MASK) | 0x10000000)
+#else
+# error "Not (yet) supported platform"  0x10050000
+#endif
+
+#define QUEUE_LINK(i,j)             queue_table[i].tasklet = (void *)( ((uint32_t)queue_table[i].tasklet & ~(0xFF << INDEX_SHIFT) ) | ((j)<<INDEX_SHIFT) )
+#define QUEUE_LINKANDCLEAR(i, j)    queue_table[i].tasklet = (void *)((j) << INDEX_SHIFT)
+#define QUEUE_NEXT(i)               (((uint32_t)(queue_table[i].tasklet) >> INDEX_SHIFT) & 0xFF)
+#define QUEUE_MUTEX(i)              ((uint32_t)(queue_table[i].tasklet) & (MUTEX_MASK << MUTEX_SHIFT))
+#define QUEUE_FUNC_VALID(i)         (void *)((uint32_t)(queue_table[i].tasklet) & FUNC_ADDR_MASK)
 #define QUEUE_TIME(i)               queue_table[i].time
 
 isn_reactor_time_t _isn_reactor_active_timestamp;
@@ -66,7 +88,6 @@ isn_reactor_time_t isn_reactor_timer_trigger;
 static isn_tasklet_entry_t *queue_table;
 static size_t queue_len;
 static volatile isn_reactor_mutex_t queue_mutex_locked_bits = 0;
-static volatile uint32_t mutex_changed = 0;
 static volatile uint8_t queue_free = 0;
 static volatile uint32_t queue_changed = 0; ///< Non-zero if event queue loop should re-run
 
@@ -101,7 +122,7 @@ int isn_reactor_call_at(const isn_reactor_tasklet_t tasklet, const isn_reactor_c
         critical_section_exit(state);
         return -1;
     }
-    queue_table[queue_free].tasklet  = (void*)((uint32_t)queue_table[queue_free].tasklet | (uint32_t)tasklet);
+    queue_table[queue_free].tasklet  = (void*)((uint32_t)queue_table[queue_free].tasklet | ((uint32_t)tasklet & (FUNC_ADDR_MASK | (MUTEX_MASK<<MUTEX_SHIFT)) ));
     queue_table[queue_free].caller   = caller;
     queue_table[queue_free].arg      = arg;
     queue_table[queue_free].time     = time;
@@ -117,24 +138,26 @@ int isn_reactor_call_at(const isn_reactor_tasklet_t tasklet, const isn_reactor_c
 /** At the moment we only have 4 muxes */
 isn_reactor_mutex_t isn_reactor_getmutex() {
     static uint32_t muxes = 0;
-    if (muxes > 4) return 0; else return (1<<muxes++);
+    if (muxes > MUTEX_COUNT) return 0; else return (1<<muxes++)<<MUTEX_SHIFT;
 }
 
-void isn_reactor_mutex_lock(isn_reactor_mutex_t mutex_bits) {
-    atomic_set_bits(&queue_mutex_locked_bits, (mutex_bits & 0xF)<<20);
+uint32_t isn_reactor_mutex_lock(isn_reactor_mutex_t mutex_bits) {
+    atomic_set_bits(&queue_mutex_locked_bits, mutex_bits);
+    return queue_mutex_locked_bits;
 }
 
-void isn_reactor_mutex_unlock(isn_reactor_mutex_t mutex_bits) {
-    atomic_clear_bits(&queue_mutex_locked_bits, (mutex_bits & 0xF)<<20);
-    mutex_changed = 1;
+uint32_t isn_reactor_mutex_unlock(isn_reactor_mutex_t mutex_bits) {
+    atomic_clear_bits(&queue_mutex_locked_bits, mutex_bits);
+    queue_changed = 1;
+    return queue_mutex_locked_bits;
 }
 
 uint32_t isn_reactor_mutex_is_locked(isn_reactor_mutex_t mutex_bits) {
-    return queue_mutex_locked_bits & ((mutex_bits & 0xF)<<20);
+    return queue_mutex_locked_bits & mutex_bits;
 }
 
 int isn_reactor_mutexqueue(const isn_reactor_tasklet_t tasklet, const void* arg, isn_reactor_mutex_t mutex_bits) {
-    return isn_reactor_queue( (void *)((uint32_t)tasklet | (mutex_bits & 0xF)<<20), arg);
+    return isn_reactor_queue( (void *)(((uint32_t)tasklet & FUNC_ADDR_MASK) | mutex_bits), arg);
 }
 
 int isn_reactor_isvalid(int index, const isn_reactor_tasklet_t tasklet, const void* arg) {
@@ -165,7 +188,7 @@ int isn_reactor_drop(int index, const isn_reactor_tasklet_t tasklet, const void*
 int isn_reactor_dropall(const isn_reactor_tasklet_t tasklet, const void* arg) {
     int removed = 0;
     uint8_t i,j;
-    for (i=0, j=QUEUE_NEXT(0); QUEUE_FUNC_ADDR(j); ) {
+    for (i=0, j=QUEUE_NEXT(0); QUEUE_FUNC_VALID(j); ) {
         if (tasklet == QUEUE_FUNC_ADDR(j) && arg == (const void *)queue_table[j].arg) {
             QUEUE_LINK(i, QUEUE_NEXT(j));
 
@@ -189,7 +212,7 @@ int isn_reactor_dropall(const isn_reactor_tasklet_t tasklet, const void* arg) {
  *  Due to the nature of list operation, all mutex locked tasklet will concentrate at the beginning
  *  of the list, that needs to be skipped on each iteration.
  *
- *  \todo Implement simplest speed optimization (see: mutex_changed variable)
+ *  \todo Implement simplest speed optimization (via mutex_changed variable)
  *   - remember last mutexed event and continue from this head instead beginning, to reduce for looping
  *   - on any mutex release change, reset head to 0
  *
@@ -205,7 +228,7 @@ int isn_reactor_step(void) {
         uint8_t i, j;
         queue_changed = 0;   // assume we are executing the last, if ISR meanwhile occurs it will only set it to number of queue size
 
-        for (i=0, j=QUEUE_NEXT(0); QUEUE_FUNC_ADDR(j); ) {
+        for (i=0, j=QUEUE_NEXT(0); QUEUE_FUNC_VALID(j); ) {
             if ( !(QUEUE_MUTEX(j) & queue_mutex_locked_bits) ) {
                 int32_t time_to_exec = (int32_t)(QUEUE_TIME(j) - *_isn_reactor_timer);
                 if (time_to_exec <= 0) {
