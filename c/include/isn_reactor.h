@@ -81,13 +81,13 @@ isn_reactor_mutex_t isn_reactor_getmutex();
 int isn_reactor_mutexqueue(const isn_reactor_tasklet_t tasklet, const void* arg, isn_reactor_mutex_t mutex_bits);
 
 /** Lock given mutex bit(s), one or more at the same time, which will stop execution of tasklets in the same mutex group */
-uint32_t isn_reactor_mutex_lock(isn_reactor_mutex_t mutex_bits);
+isn_reactor_mutex_t isn_reactor_mutex_lock(isn_reactor_mutex_t mutex_bits);
 
 /** Unlock mutex bits */
-uint32_t isn_reactor_mutex_unlock(isn_reactor_mutex_t mutex_bits);
+isn_reactor_mutex_t isn_reactor_mutex_unlock(isn_reactor_mutex_t mutex_bits);
 
 /** \returns non-zero if locked */
-uint32_t isn_reactor_mutex_is_locked(isn_reactor_mutex_t mutex_bits);
+isn_reactor_mutex_t isn_reactor_mutex_is_locked(isn_reactor_mutex_t mutex_bits);
 
 /** Is tasklet still pending in the queue, given by exact specs to ensure full integrity
  *
@@ -123,6 +123,12 @@ int isn_reactor_step(void);
  * \returns time to next execution referred to a timer
  */
 isn_reactor_time_t isn_reactor_run(void);
+
+/** Self-test, performs basic and mutex queues check
+ *  Side effect, it uses one mutex and does not free it.
+ * \returns 0 on success, or negative value showing progress
+ */
+int isn_reactor_selftest();
 
 /** Initialize reactor and provide queue buffer */
 void isn_reactor_init(isn_tasklet_entry_t *tasklet_queue, size_t queue_size, const volatile isn_reactor_time_t* timer);

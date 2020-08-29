@@ -11,11 +11,9 @@
 /*
     QUEUE: Instead of a FIFO single linked list is used to be able to implement simple mutex locking
 
-    Simple small ARM solution uses upper 4 bits to encode mutexes and assumes:
+    Simple small ARM solution uses 4 bits to encode mutexes and assumes:
         pointers are in the range: 0x0000 0000 – 0x0003 FFFF (CPU: PSoC5)
-    Then:
-     - upper byte is used for linking
-     - next nibble is used for 4 mutex groups
+    One byte is used for linking
 
     QUEUE Operations:
 
@@ -91,8 +89,8 @@ static volatile isn_reactor_mutex_t queue_mutex_locked_bits = 0;
 static volatile uint8_t queue_free = 0;
 static volatile uint32_t queue_changed = 0; ///< Non-zero if event queue loop should re-run
 
-uint32_t isn_tasklet_queue_size;
-uint32_t isn_tasklet_queue_max;
+uint32_t isn_tasklet_queue_size = 0;
+uint32_t isn_tasklet_queue_max = 0;
 
 typedef uint8_t critical_section_state_t;
 
@@ -141,18 +139,18 @@ isn_reactor_mutex_t isn_reactor_getmutex() {
     if (muxes > MUTEX_COUNT) return 0; else return (1<<muxes++)<<MUTEX_SHIFT;
 }
 
-uint32_t isn_reactor_mutex_lock(isn_reactor_mutex_t mutex_bits) {
+isn_reactor_mutex_t isn_reactor_mutex_lock(isn_reactor_mutex_t mutex_bits) {
     atomic_set_bits(&queue_mutex_locked_bits, mutex_bits);
     return queue_mutex_locked_bits;
 }
 
-uint32_t isn_reactor_mutex_unlock(isn_reactor_mutex_t mutex_bits) {
+isn_reactor_mutex_t isn_reactor_mutex_unlock(isn_reactor_mutex_t mutex_bits) {
     atomic_clear_bits(&queue_mutex_locked_bits, mutex_bits);
     queue_changed = 1;
     return queue_mutex_locked_bits;
 }
 
-uint32_t isn_reactor_mutex_is_locked(isn_reactor_mutex_t mutex_bits) {
+isn_reactor_mutex_t isn_reactor_mutex_is_locked(isn_reactor_mutex_t mutex_bits) {
     return queue_mutex_locked_bits & mutex_bits;
 }
 
@@ -271,10 +269,36 @@ isn_reactor_time_t isn_reactor_run(void) {
     return isn_reactor_timer_trigger;
 }
 
+int isn_reactor_selftest() {
+    static int count = 0;
+    isn_reactor_mutex_t mux = isn_reactor_getmutex();
+
+    void *count_event(const void *arg) {
+        count++;
+        return NULL;
+    }
+
+    isn_reactor_queue(count_event, NULL);
+    isn_reactor_run();
+    if (count != 1) return -1;
+    isn_reactor_mutex_lock( mux );
+    isn_reactor_mutexqueue(count_event, NULL, mux);
+    isn_reactor_run();
+    if (count != 1) return -2;
+    isn_reactor_mutex_unlock( mux );
+    isn_reactor_run();
+    if (count != 2) return -3;
+    return 0;
+}
+
 void isn_reactor_init(isn_tasklet_entry_t *tasklet_queue, size_t queue_size, const volatile isn_reactor_time_t* timer) {
     _isn_reactor_timer = timer;
     queue_table = tasklet_queue;
     queue_len   = queue_size;
     queue_free  = 1; // leave 0th cell for algo simplification as well as last.
+    queue_changed = 0;
+    queue_mutex_locked_bits = 0;
+    isn_tasklet_queue_size = 0;
+    isn_tasklet_queue_max = 0;
     for (uint8_t i=0; i<queue_len; i++) QUEUE_LINKANDCLEAR(i, i+1);
 }
