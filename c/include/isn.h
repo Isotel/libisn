@@ -16,5 +16,6 @@
 #include "isn_msg.h"
 #include "isn_io.h"
 #include "isn_reactor.h"
+#include "isn_clock.h"
 
 #endif

@@ -130,7 +130,7 @@ typedef struct {
     isn_driver_t* other;
     isn_driver_t* parent;
     isn_frame_mode_t crc_enabled;
-    volatile uint32_t *sys_counter;
+    volatile const uint32_t *sys_counter;
     uint32_t frame_timeout;
 
     uint8_t state;
@@ -158,7 +158,7 @@ isn_frame_t;
  * \param timeout defines period with reference to the counter after which reception is treated as invalid and to be discarded
  *        A 100 ms is a good choice.
  */
-void isn_frame_init(isn_frame_t *obj, isn_frame_mode_t mode, isn_layer_t* child, isn_layer_t* other, isn_layer_t* parent, volatile uint32_t *counter, uint32_t timeout);
+void isn_frame_init(isn_frame_t *obj, isn_frame_mode_t mode, isn_layer_t* child, isn_layer_t* other, isn_layer_t* parent, volatile const uint32_t *counter, uint32_t timeout);
 
 #ifdef __cplusplus
 }

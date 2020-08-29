@@ -151,7 +151,7 @@ static size_t isn_frame_recv(isn_layer_t *drv, const void *src, size_t size, isn
     return size;
 }
 
-void isn_frame_init(isn_frame_t *obj, isn_frame_mode_t mode, isn_layer_t* child, isn_layer_t* other, isn_layer_t* parent, volatile uint32_t *counter, uint32_t timeout) {
+void isn_frame_init(isn_frame_t *obj, isn_frame_mode_t mode, isn_layer_t* child, isn_layer_t* other, isn_layer_t* parent, volatile const uint32_t *counter, uint32_t timeout) {
     assert(parent);
     assert(child);
 
