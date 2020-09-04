@@ -23,9 +23,13 @@ volatile const isn_clock_counter_t *isn_clock_counter;
 
 /** \{ */
 
-void isn_clock_start() {
-    CLOCK_Start();
+void isn_clock_init() {
     isn_clock_counter = &TCPWM_CNT_COUNTER(CLOCK_HW, CLOCK_CNT_NUM);
+}
+
+void isn_clock_start() {
+    isn_clock_init();
+    CLOCK_Start();    
 }
 
 /** \} \endcond */
