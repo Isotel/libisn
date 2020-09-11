@@ -16,7 +16,7 @@
 #ifndef __ISN_CLOCK_H__
 #define __ISN_CLOCK_H__
 
-#include <project.h>
+#include "isn_def.h"
 
 /** \{ */
 
