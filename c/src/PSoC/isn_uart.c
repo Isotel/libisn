@@ -123,8 +123,9 @@ int isn_uart_poll(isn_uart_t *obj) {
         if (size < obj->rx_size) {
             obj->rx_retry++;    // Packet could not be fully accepted, retry next time
             memmove(obj->rxbuf, &obj->rxbuf[size], obj->rx_size - size);
+            obj->rx_size -= size;
         }
-        obj->rx_size -= size;
+        else obj->rx_size = 0;  // handles case if recv() returns size higher than rx_size
     }
     return size;
 }

@@ -143,7 +143,7 @@ size_t isn_usbfs_poll(isn_usbfs_t *obj) {
         }
     }
     if (obj->rx_size) {
-        if (obj->child_driver->recv(obj->child_driver, obj->rxbuf, obj->rx_size, &obj->drv) == obj->rx_size) {
+        if (obj->child_driver->recv(obj->child_driver, obj->rxbuf, obj->rx_size, &obj->drv) >= obj->rx_size) {
             obj->rx_size = 0;
         }
         else obj->rx_retry++;    // Packet could not be fully accepted, retry next time
