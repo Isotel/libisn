@@ -66,8 +66,7 @@ static void* counter_cb(const void* data) {
 }
 
 // Triggers every second by IDM unless this device is sending other data
-size_t ping_recv(isn_layer_t* drv, const void* src, size_t size,
-                      isn_driver_t* caller) {
+size_t ping_recv(isn_layer_t* drv, const void* src, size_t size, isn_layer_t* caller) {
     isn_msg_sendby(&isn_message, counter_cb, ISN_MSG_PRI_NORMAL);
     return size;
 }
@@ -79,7 +78,7 @@ static isn_msg_table_t isn_msg_table[] = {
 
 static isn_bindings_t isn_bindings[] = {
     { ISN_PROTO_MSG,  &isn_message },
-    { ISN_PROTO_PING, &(isn_receiver_t) { ping_recv }},
+    { ISN_PROTO_PING, &(isn_receiver_t){ ping_recv }},
     { ISN_PROTO_LISTEND, NULL }};
 
 /*--------------------------------------------------------------------*/
@@ -127,7 +126,7 @@ int main(int argc, char* argv[]) {
         if (isn_msg_sched(&isn_message) > 0) count = 0;
 
         // Emulate ping and ask for some message
-        if (active) if (++count > 110) {   
+        if (active) if (++count > 110) {
             isn_msg_send(&isn_message, 1, ISN_MSG_PRI_QUERY_ARGS);
             printf("Ping\n");
             count = 0;

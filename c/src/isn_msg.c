@@ -68,11 +68,13 @@ static int isn_msg_sendnext(isn_message_t *obj) {
             send_packet(obj, (uint8_t)0x80 | obj->msgnum, picked->desc, strlen(picked->desc));
             picked->priority = (obj->msgnum == obj->isn_msg_received_msgnum) ? ISN_MSG_PRI_HIGHEST : ISN_MSG_PRI_LOW;
         }
+#ifdef TODO_CLARIFY_WITH_IDM
         // a message without args cannot be sent as args, but only desc (first if)
         else if (picked->size == 0) {
             picked->priority = ISN_MSG_PRI_CLEAR;
             obj->tx_dropped++;
         }
+#endif
         // Note that the message we're asking for is just arriving, and for messages without
         // any handler, we reply back with query, but we do not block the message.
         else if (picked->handler == NULL || (picked->priority == ISN_MSG_PRI_QUERY_ARGS && obj->msgnum != obj->isn_msg_received_msgnum)) {
@@ -109,11 +111,9 @@ static int isn_msg_sendnext(isn_message_t *obj) {
     return 0;
 }
 
-
 int isn_msg_isinput_valid(isn_message_t *obj, const void *arg) {
     return (arg == obj->handler_input) && arg;
 }
-
 
 /**
  * We only want to increase priority and never reduce.
@@ -129,13 +129,11 @@ static void isn_msg_post(isn_message_t *obj, uint8_t message_id, uint8_t priorit
     obj->pending = 1;
 }
 
-
 void isn_msg_send(isn_message_t *obj, uint8_t message_id, uint8_t priority) {
     if (obj->handler_msgnum != message_id) {         // Do not mark and trigger a message from which we're called
         isn_msg_post(obj, message_id, priority);
     }
 }
-
 
 uint8_t isn_msg_sendqby(isn_message_t *obj, isn_events_handler_t hnd, uint8_t priority, uint8_t msgnum) {
 	for (; msgnum < obj->isn_msg_table_size; msgnum++) {
@@ -146,7 +144,6 @@ uint8_t isn_msg_sendqby(isn_message_t *obj, isn_events_handler_t hnd, uint8_t pr
     }
     return 0xff;
 }
-
 
 uint8_t isn_msg_resend_queries(isn_message_t *obj) {
     uint8_t count = 0;
@@ -216,6 +213,17 @@ int isn_msg_sched(isn_message_t *obj) {
     return obj->pending;
 }
 
+/**
+ * - clears all false pending messages without any payload that could confuse receiver,
+ *   as zero payload means query
+ */
+static void sanity_check(isn_message_t *obj) {
+	for (uint8_t i = 0; i < obj->isn_msg_table_size; i++) {
+		if (obj->isn_msg_table[i].priority > ISN_MSG_PRI_CLEAR && obj->isn_msg_table[i].size == 0) {
+            obj->isn_msg_table[i].priority = ISN_MSG_PRI_CLEAR;
+        }
+    }
+}
 
 void isn_msg_init(isn_message_t *obj, isn_msg_table_t* messages, uint8_t size, isn_layer_t* parent) {
     obj->drv.recv = isn_message_recv;
@@ -233,6 +241,7 @@ void isn_msg_init(isn_message_t *obj, isn_msg_table_t* messages, uint8_t size, i
     obj->tx_dropped = 0;
     obj->tx_packets = 0;
     isn_msg_self = obj;
+    sanity_check(obj);
 }
 
 /** \} \endcond */

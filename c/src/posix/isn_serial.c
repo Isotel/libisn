@@ -66,7 +66,7 @@ static char* hex_dump(const unsigned char* buffer, size_t size) {
     return strbuf;
 }
 
-static int get_send_buf(isn_layer_t* drv, void** buf, size_t size, isn_layer_t* caller) {
+static int get_send_buf(isn_layer_t* drv, void** buf, size_t size, const isn_layer_t* caller) {
     isn_serial_driver_t* const driver = (isn_serial_driver_t*) drv;
 
     if (!driver->buf_locked) {

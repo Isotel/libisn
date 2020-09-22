@@ -187,7 +187,7 @@ static int wsa_startup() {
 #endif
 }
 
-static int get_send_buf(isn_layer_t* drv, void** buf, size_t size, isn_layer_t* caller) {
+static int get_send_buf(isn_layer_t* drv, void** buf, size_t size, const isn_layer_t* caller) {
     isn_udp_driver_t* const driver = (isn_udp_driver_t*) drv;
 
     if (!driver->buf_locked) {
