@@ -62,7 +62,10 @@ static int isn_msg_sendnext(isn_message_t *obj) {
 
         // Set and release locks
         if (obj->isn_msg_received_msgnum == obj->lock) obj->lock = 0;
-        else if (picked->priority == ISN_MGG_PRI_UPDATE_ARGS) obj->lock = obj->msgnum;
+        else if (picked->priority == ISN_MGG_PRI_UPDATE_ARGS) {
+            obj->lock = obj->msgnum;
+            obj->resend_timer = 0;
+        }
 
         if (picked->priority >= ISN_MSG_PRI_DESCRIPTIONLOW) {
             send_packet(obj, (uint8_t)0x80 | obj->msgnum, picked->desc, strlen(picked->desc));
@@ -80,6 +83,7 @@ static int isn_msg_sendnext(isn_message_t *obj) {
         else if (picked->handler == NULL || (picked->priority == ISN_MSG_PRI_QUERY_ARGS && obj->msgnum != obj->isn_msg_received_msgnum)) {
             send_packet(obj, obj->msgnum, NULL, 0);
             picked->priority = picked->handler ? ISN_MSG_PRI_QUERY_WAIT : ISN_MSG_PRI_CLEAR;
+            if (picked->priority == ISN_MSG_PRI_QUERY_WAIT) obj->resend_timer = 0;
         }
         else {
             obj->handler_priority = picked->priority;
@@ -145,19 +149,23 @@ uint8_t isn_msg_sendqby(isn_message_t *obj, isn_events_handler_t hnd, uint8_t pr
     return 0xff;
 }
 
-uint8_t isn_msg_resend_queries(isn_message_t *obj) {
+uint8_t isn_msg_resend_queries(isn_message_t *obj, uint32_t timeout) {
     uint8_t count = 0;
-    if (obj->lock) {
-        obj->isn_msg_table[obj->lock].priority = ISN_MGG_PRI_UPDATE_ARGS;
-        obj->lock = 0;
-        count++;
-    }
-	for (uint8_t msgnum = 0; msgnum < obj->isn_msg_table_size; msgnum++) {
-        if (obj->isn_msg_table[msgnum].priority == ISN_MSG_PRI_QUERY_WAIT) {
-            obj->isn_msg_table[msgnum].priority = ISN_MSG_PRI_QUERY_ARGS;
+    if (obj->resend_timer < INT32_MAX) obj->resend_timer++;
+    if (obj->resend_timer > timeout) {
+        if (obj->lock) {
+            obj->isn_msg_table[obj->lock].priority = ISN_MGG_PRI_UPDATE_ARGS;
+            obj->lock = 0;
             count++;
         }
-	}
+        for (uint8_t msgnum = 0; msgnum < obj->isn_msg_table_size; msgnum++) {
+            if (obj->isn_msg_table[msgnum].priority == ISN_MSG_PRI_QUERY_WAIT) {
+                obj->isn_msg_table[msgnum].priority = ISN_MSG_PRI_QUERY_ARGS;
+                count++;
+            }
+        }
+    }
+    if (count) obj->resend_timer = 0;
     return count;
 }
 
@@ -240,6 +248,7 @@ void isn_msg_init(isn_message_t *obj, isn_msg_table_t* messages, uint8_t size, i
     obj->msgnum = 0;
     obj->tx_dropped = 0;
     obj->tx_packets = 0;
+    obj->resend_timer = 0;
     isn_msg_self = obj;
     sanity_check(obj);
 }

@@ -244,6 +244,7 @@ typedef struct {
     uint8_t pending;
     uint8_t msgnum;                             ///< Last msgnum sent
     uint8_t lock;                               ///< Lock, to prevent sending further messages, when waiting for ack (reply)
+    uint32_t resend_timer;
 }
 isn_message_t;
 
@@ -297,13 +298,17 @@ static inline uint8_t isn_msg_sendby(isn_message_t *obj, isn_events_handler_t hn
  *
  * This function may be called with a (retry) timer, every since (1 - 3 seconds) to
  * ensure other party responds to the messages. Function returns number of still pending
- * messages. If within certain time this value is not 0 means other party is not responding,
- * indicating some issues on the other side.
+ * messages that have been rescheduled for transmission. If within certain time this 
+ * value is not 0 means other party is not responding, indicating some issues on the other 
+ * side. The parameter timeout if 0, means that rescheduling is done on each call 
+ * for events marked as ISN_MGG_PRI_UPDATE_ARGS and ISN_MSG_PRI_QUERY_WAIT. If timeout
+ * is 1, or higher, then reschedulling starts after 1, or 2, call to this function.
  *
- * \param isn_msg_handler_t
+ * \param isn_handler_t
+ * \param timeout, number of calls to this routine after which resend actually takes progress
  * \returns number of query messages marked for re-transmission
  */
-uint8_t isn_msg_resend_queries(isn_message_t *obj);
+uint8_t isn_msg_resend_queries(isn_message_t *obj, uint32_t timeout);
 
 /**
  * Callback may call this function to confirm that input relates
