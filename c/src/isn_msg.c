@@ -212,6 +212,7 @@ static size_t isn_message_recv(isn_layer_t *drv, const void *src, size_t size, i
         }
         isn_msg_post(obj, msgnum, (uint8_t) (buf[1] & 0x80 ? ISN_MSG_PRI_DESCRIPTION : ISN_MSG_PRI_HIGHEST));
     }
+    else if (msgnum == obj->lock) obj->lock = 0;
     obj->msgnum = msgnum;   // speed-up response time to all incoming request and to release incoming buffer
     return size;
 }
