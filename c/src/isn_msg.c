@@ -199,15 +199,20 @@ static size_t isn_message_recv(isn_layer_t *drv, const void *src, size_t size, i
     if (data_size > 0 && (obj->isn_msg_received_data != NULL || data_size != obj->isn_msg_table[msgnum].size)) {
         return 0;  // we cannot handle multiple receive buffer requests atm, nor wrong input sizes
     }
-    if (data_size > 0) {
-        assert(data_size <= RECV_MESSAGE_SIZE);
-        memcpy(obj->message_buffer, buf+2, data_size);   // copy recv data into a receive buffer to be handled by sched
-        obj->isn_msg_received_data = obj->message_buffer;
-        obj->isn_msg_received_msgnum = msgnum;
-    }
-    isn_msg_post(obj, msgnum, (uint8_t) (buf[1] & 0x80 ? ISN_MSG_PRI_DESCRIPTION : ISN_MSG_PRI_HIGHEST));
-    obj->msgnum = msgnum;   // speed-up response time to all incoming request and to release incoming buffer
 
+    /* Discard data if another UPDATE ARGS for the same message is already in progress, 
+     * which eliminates inter-mediate receieve callbacks
+     */
+    if (obj->isn_msg_table[msgnum].priority != ISN_MGG_PRI_UPDATE_ARGS ) {
+        if (data_size > 0) {
+            assert(data_size <= RECV_MESSAGE_SIZE);
+            memcpy(obj->message_buffer, buf+2, data_size);   // copy recv data into a receive buffer to be handled by sched
+            obj->isn_msg_received_data = obj->message_buffer;
+            obj->isn_msg_received_msgnum = msgnum;
+        }
+        isn_msg_post(obj, msgnum, (uint8_t) (buf[1] & 0x80 ? ISN_MSG_PRI_DESCRIPTION : ISN_MSG_PRI_HIGHEST));
+    }
+    obj->msgnum = msgnum;   // speed-up response time to all incoming request and to release incoming buffer
     return size;
 }
 
