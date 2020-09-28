@@ -327,6 +327,17 @@ int isn_msg_isinput_valid(isn_message_t *obj, const void *arg);
  */
 static inline int isn_msg_isquery(isn_message_t *obj) {return obj->handler_priority == ISN_MSG_PRI_HIGHEST;}
 
+/**
+ * To be used within the callback, it may ask if data is a
+ * reply to previously sent out query.
+ * 
+ * \returns non-zero if message is a response to a ISN_MSG_PRI_QUERY_ARGS or just 
+ *          in-time received message (clears ISN_MSG_PRI_QUERY_ARGS)
+ */
+static inline int isn_msg_isreply(isn_message_t *obj) {
+    return obj->handler_priority == ISN_MSG_PRI_QUERY_WAIT || obj->handler_priority == ISN_MSG_PRI_QUERY_ARGS;
+}
+
 #ifdef __cplusplus
 }
 #endif
