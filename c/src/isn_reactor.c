@@ -182,7 +182,9 @@ int isn_reactor_change_timed_self(isn_reactor_time_t newtime) {
     if (self_index >= 0) {
         queue_table[self_index].time = newtime;
         queue_changed = 1;
+        return 0;
     }
+    return -1;
 }
 
 int isn_reactor_drop(int index, const isn_reactor_tasklet_t tasklet, const void* arg) {
