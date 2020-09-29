@@ -132,7 +132,7 @@ int isn_uart_poll(isn_uart_t *obj) {
     return size;
 }
 
-int isn_uart_collect(isn_uart_t *obj, size_t maxsize, volatile uint32_t *counter, uint32_t timeout) {
+int isn_uart_collect(isn_uart_t *obj, size_t maxsize, const volatile uint32_t *counter, uint32_t timeout) {
     static uint32_t ts = 0;
     size_t size = UART_GetNumInRxFifo();
     if (size) {
