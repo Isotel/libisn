@@ -71,8 +71,6 @@ typedef struct {
     isn_driver_t* child;
 
     uint8_t user_id;
-    size_t rx_counter;
-    size_t tx_counter;
 }
 isn_user_t;
 

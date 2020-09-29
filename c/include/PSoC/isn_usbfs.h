@@ -41,8 +41,6 @@ typedef struct {
     int buf_locked;
     int next_send_ep;
     size_t rx_size;
-    size_t rx_counter;
-    size_t rx_retry;
 }
 isn_usbfs_t;
 

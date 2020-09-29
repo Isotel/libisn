@@ -91,6 +91,7 @@ static volatile uint32_t queue_changed = 0; ///< Non-zero if event queue loop sh
 
 uint32_t isn_tasklet_queue_size = 0;
 uint32_t isn_tasklet_queue_max = 0;
+static int self_index = -1;
 
 typedef uint8_t critical_section_state_t;
 
@@ -139,19 +140,22 @@ isn_reactor_mutex_t isn_reactor_getmutex() {
     if (muxes > MUTEX_COUNT) return 0; else return (1<<muxes++)<<MUTEX_SHIFT;
 }
 
-isn_reactor_mutex_t isn_reactor_mutex_lock(isn_reactor_mutex_t mutex_bits) {
+int isn_reactor_mutex_lock(isn_reactor_mutex_t mutex_bits) {
+    isn_reactor_mutex_t old_locks = queue_mutex_locked_bits;
     atomic_set_bits(&queue_mutex_locked_bits, mutex_bits);
-    return queue_mutex_locked_bits;
+    return queue_mutex_locked_bits == old_locks;
 }
 
-isn_reactor_mutex_t isn_reactor_mutex_unlock(isn_reactor_mutex_t mutex_bits) {
+int isn_reactor_mutex_unlock(isn_reactor_mutex_t mutex_bits) {
+    isn_reactor_mutex_t old_locks = queue_mutex_locked_bits;
     atomic_clear_bits(&queue_mutex_locked_bits, mutex_bits);
+    if (queue_mutex_locked_bits == old_locks) return 1;
     queue_changed = 1;
-    return queue_mutex_locked_bits;
+    return 0;
 }
 
-isn_reactor_mutex_t isn_reactor_mutex_is_locked(isn_reactor_mutex_t mutex_bits) {
-    return queue_mutex_locked_bits & mutex_bits;
+int isn_reactor_mutex_is_locked(isn_reactor_mutex_t mutex_bits) {
+    return (queue_mutex_locked_bits & mutex_bits) != 0;
 }
 
 int isn_reactor_mutexqueue(const isn_reactor_tasklet_t tasklet, const void* arg, isn_reactor_mutex_t mutex_bits) {
@@ -172,6 +176,13 @@ int isn_reactor_change_timed(int index, const isn_reactor_tasklet_t tasklet, con
     }
     critical_section_exit(state);
     return retval;
+}
+
+int isn_reactor_change_timed_self(isn_reactor_time_t newtime) {
+    if (self_index >= 0) {
+        queue_table[self_index].time = newtime;
+        queue_changed = 1;
+    }
 }
 
 int isn_reactor_drop(int index, const isn_reactor_tasklet_t tasklet, const void* arg) {
@@ -232,13 +243,16 @@ int isn_reactor_step(void) {
                 if (time_to_exec <= 0) {
                     isn_reactor_tasklet_t tasklet = QUEUE_FUNC_ADDR(j);
                     _isn_reactor_active_timestamp = queue_table[j].time;
+                    self_index                    = j;
 
+                    executed++;
                     const void *retval = NULL;
                     if (tasklet) {
                         retval = tasklet( (const void *)queue_table[j].arg );
-                    }
-                    if  (queue_table[j].caller ) {
-                        queue_table[j].caller( tasklet, (const void *)queue_table[j].arg, retval );
+                        if (retval == (const void *)tasklet) continue; // returning self means retrigger the event
+                        if ( queue_table[j].caller ) {
+                            queue_table[j].caller( tasklet, (const void *)queue_table[j].arg, retval );
+                        }
                     }
                     QUEUE_LINK(i, QUEUE_NEXT(j));
 
@@ -249,7 +263,6 @@ int isn_reactor_step(void) {
                     if (isn_tasklet_queue_size > isn_tasklet_queue_max) isn_tasklet_queue_max = isn_tasklet_queue_size;
                     queue_changed = --isn_tasklet_queue_size; // avoid additional looping if it is last
                     critical_section_exit(state);
-                    executed++;
                     j = i;
                 }
                 else if (time_to_exec < next_time_to_exec) {
@@ -261,6 +274,7 @@ int isn_reactor_step(void) {
         }
         isn_reactor_timer_trigger = *_isn_reactor_timer + next_time_to_exec;
     }
+    self_index = -1;
     return executed;
 }
 

@@ -51,13 +51,10 @@ extern "C" {
 
 typedef struct {
     /* ISN Abstract Class Driver */
-    isn_receiver_t drv;
+    isn_driver_t drv;
 
     /* Private data */
     isn_driver_t* target;
-
-    size_t tx_counter;
-    size_t tx_retry;
     uint8_t en_fragment;    ///< Enable fragmention
 }
 isn_redirect_t;

@@ -27,19 +27,18 @@ static size_t isn_redirect_recv(isn_layer_t *drv, const void *src, size_t size, 
     if ( bs == size || (bs > 0 && obj->en_fragment) ) {
         memcpy(obuf, src, bs);
         target->send(target, obuf, bs);
-        obj->tx_counter += bs;
+        obj->drv.stats.tx_counter += bs;
         return bs;
     }
-    obj->tx_retry++;
+    obj->drv.stats.tx_retries++;
     target->free(target, obuf);
     return 0;
 }
 
 void isn_redirect_init(isn_redirect_t *obj, isn_layer_t* target) {
+    memset(&obj->drv, 0, sizeof(obj->drv));
     obj->drv.recv = isn_redirect_recv;
     obj->target   = target;
-    obj->tx_retry = 0;
-    obj->tx_counter=0;
     obj->en_fragment=0;
 }
 

@@ -48,9 +48,6 @@ typedef struct {
     isn_driver_t* child;
 
     uint8_t port;
-    size_t rx_counter;
-    size_t tx_counter;
-    size_t tx_frame_counter;
 }
 isn_trans_t;
 

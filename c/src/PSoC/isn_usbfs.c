@@ -123,6 +123,8 @@ static int isn_usbfs_send(isn_layer_t *drv, void *dest, size_t size) {
     assert(size <= TXBUF_SIZE);
     if (size) {
         USBFS_LoadInEP(obj->buf_locked, dest, size);
+        obj->drv.stats.tx_counter += size;
+        obj->drv.stats.tx_packets++;
         //if (++obj->next_send_ep > USB_SEND_EPend) obj->next_send_ep = USB_SEND_EPst;
     }
     isn_usbfs_free(drv, dest);
@@ -139,19 +141,21 @@ size_t isn_usbfs_poll(isn_usbfs_t *obj) {
         if (USBFS_GetEPState(USB_RECV_EP) == USBFS_OUT_BUFFER_FULL) {
             USBFS_ReadOutEP(USB_RECV_EP, (uint8_t*)obj->rxbuf, obj->rx_size = USBFS_GetEPCount(USB_RECV_EP));
             USBFS_EnableOutEP(USB_RECV_EP);
-            obj->rx_counter += obj->rx_size;
+            obj->drv.stats.rx_counter += obj->rx_size;
+            obj->drv.stats.rx_packets++;
         }
     }
     if (obj->rx_size) {
         if (obj->child_driver->recv(obj->child_driver, obj->rxbuf, obj->rx_size, &obj->drv) >= obj->rx_size) {
             obj->rx_size = 0;
         }
-        else obj->rx_retry++;    // Packet could not be fully accepted, retry next time
+        else obj->drv.stats.rx_retries++;    // Packet could not be fully accepted, retry next time
     }
     return obj->rx_size;
 }
 
 void isn_usbfs_init(isn_usbfs_t *obj, int mode, isn_layer_t* child) {
+    memset(&obj->drv, 0, sizeof(obj->drv));
     obj->drv.getsendbuf = isn_usbfs_getsendbuf;
     obj->drv.send = isn_usbfs_send;
     obj->drv.recv = NULL;
@@ -159,7 +163,6 @@ void isn_usbfs_init(isn_usbfs_t *obj, int mode, isn_layer_t* child) {
     obj->child_driver = child;
     obj->buf_locked = 0;
     obj->rx_size    = 0;
-    obj->rx_counter = 0;
     obj->next_send_ep = USB_SEND_EPst; /** first free EP */
 
     USBFS_Start(0u, mode);

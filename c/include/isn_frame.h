@@ -138,8 +138,6 @@ typedef struct {
     uint8_t recv_buf[ISN_FRAME_MAXSIZE];
     uint8_t recv_size;
     uint8_t recv_len;
-    uint32_t rx_frames;
-    uint32_t rx_errors;
     uint32_t last_ts;
 }
 isn_frame_t;

@@ -14,6 +14,7 @@
  * (c) Copyright 2019, Isotel, http://isotel.eu
  */
 
+#include <string.h>
 #include "isn_user.h"
 
 /**\{ */
@@ -38,7 +39,8 @@ static int isn_user_send(isn_layer_t *drv, void *dest, size_t size) {
     isn_user_t *obj = (isn_user_t *)drv;
     uint8_t *buf = dest;
     *(--buf) = obj->user_id;
-    obj->tx_counter+=size;
+    obj->drv.stats.tx_packets++;
+    obj->drv.stats.tx_counter+=size;
     return obj->parent->send(obj->parent, buf, size+1);
 }
 
@@ -47,13 +49,17 @@ static size_t isn_user_recv(isn_layer_t *drv, const void *src, size_t size, isn_
     const uint8_t *buf = src;
     if (*buf == obj->user_id) {
         size_t passed = obj->child->recv(obj->child, buf+1, size-1, drv) + 1;
-        if (passed > 0) obj->rx_counter += passed-1;    // Only account passed data to avoid retries
+        if (passed > 0) {
+            obj->drv.stats.rx_counter += passed-1;    // Only account passed data to avoid retries
+            obj->drv.stats.rx_packets++;
+        }
         return passed;
     }
     return 0;
 }
 
 void isn_user_init(isn_user_t *obj, isn_layer_t* child, isn_layer_t* parent, uint8_t user_id) {
+    memset(&obj->drv, 0, sizeof(obj->drv));
     obj->drv.getsendbuf = isn_user_getsendbuf;
     obj->drv.send       = isn_user_send;
     obj->drv.recv       = isn_user_recv;
@@ -61,8 +67,6 @@ void isn_user_init(isn_user_t *obj, isn_layer_t* child, isn_layer_t* parent, uin
     obj->user_id        = user_id;
     obj->child          = child;
     obj->parent         = parent;
-    obj->rx_counter     = 0;
-    obj->tx_counter     = 0;
 }
 
 /** \} \endcond */

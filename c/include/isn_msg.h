@@ -226,10 +226,7 @@ extern uint8_t handler_priority;
 
 typedef struct {
     /* ISN Abstract Class Driver */
-    isn_receiver_t drv;
-
-    size_t tx_dropped;
-    size_t tx_packets;
+    isn_driver_t drv;
 
     /* Private data */
     isn_driver_t* parent_driver;

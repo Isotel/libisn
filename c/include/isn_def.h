@@ -222,7 +222,28 @@ extern "C" {
 
 #define ISN_PROTO_PING      0x00
 
-/** C-like Weak Abstract class of isn_layer_t */
+/**
+ * Driver Statistics
+ */
+typedef struct {
+    uint32_t rx_packets;    ///< number of packets or frames received
+    uint32_t rx_counter;    ///< number of bytes of user payload
+    uint32_t rx_errors;     ///< Received with errors
+    uint32_t rx_retries;    ///< number of retries to deliver the received message
+    uint32_t rx_dropped;    ///< Received successfully but couldn't be delivered in time
+    uint32_t tx_packets;    ///< number of packets or frames sent
+    uint32_t tx_counter;    ///< number of bytes of user payload
+    uint32_t tx_dropped;    ///< Couldn't be sent
+    uint32_t tx_retries;    ///< Number of retries
+} __attribute__((packed)) isn_driver_stats_t;
+
+#define ISN_DRIVER_STATS_DESC(cb) \
+    {0, sizeof(isn_driver_stats_t), cb, "RX rx{{:packets}={%lu}{:bytes}={%lu}{:errors}={%lu}"}, \
+    {0, 0,                        NULL, "+{:retries}={%lu}{:dropped}={%lu}}\nTX tx{{:packets}={%lu}"}, \
+    {0, 0,                        NULL, "+{:bytes}={%lu}{:dropped}={%lu}{:retries}={%lu}}\n" }
+                                      //"----+----1----+----2----+----3----+----4----+----5----+----6-"
+
+/** C-like Weak Abstract class of isn_drives_t */
 typedef void isn_layer_t;
 
 /**
@@ -276,6 +297,9 @@ typedef struct isn_driver_s {
      * Free buffer provided by getsendbuf().
      */
     void (*free)(isn_layer_t *drv, const void *ptr);
+
+    /** Driver statistics */
+    isn_driver_stats_t stats;
 }
 isn_driver_t;
 

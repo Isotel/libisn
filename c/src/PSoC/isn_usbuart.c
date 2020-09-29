@@ -57,6 +57,8 @@ static int isn_usbuart_send(isn_layer_t *drv, void *dest, size_t size) {
     if (size) {
         while( !USBUART_CDCIsReady() ); // todo: timeout assert
         USBUART_PutData(dest, size);
+        obj->drv.stats.tx_counter += size;
+        obj->drv.stats.tx_packets++;
     }
     isn_usbuart_free(drv, dest);    // free buffer, however need to block use of buffer until sent out
     return size;
@@ -70,13 +72,15 @@ size_t isn_usbuart_poll(isn_usbuart_t *obj) {
         if ( size ) {
             USBUART_GetData(&obj->rxbuf[obj->rx_size], size);
             obj->rx_size += size;
+            obj->drv.stats.rx_counter += size;
         }
-        else obj->rx_dropped++; // It hasn't been really dropped yet
+        else obj->drv.stats.rx_dropped++; // It hasn't been really dropped yet
     }
     if (obj->rx_size) {        
         size = obj->child_driver->recv(obj->child_driver, obj->rxbuf, obj->rx_size, &obj->drv);
+        if (size) obj->drv.stats.rx_packets++;
         if (size < obj->rx_size) {
-            obj->rx_retry++;    // Packet could not be fully accepted, retry next time
+            obj->drv.stats.rx_retries++;    // Packet could not be fully accepted, retry next time
             memmove(obj->rxbuf, &obj->rxbuf[size], obj->rx_size - size);
             obj->rx_size -= size;
         }
@@ -86,6 +90,7 @@ size_t isn_usbuart_poll(isn_usbuart_t *obj) {
 }
 
 void isn_usbuart_init(isn_usbuart_t *obj, int mode, isn_layer_t* child) {
+    memset(&obj->drv, 0, sizeof(obj->drv));
     obj->drv.getsendbuf = isn_usbuart_getsendbuf;
     obj->drv.send = isn_usbuart_send;
     obj->drv.recv = NULL;
@@ -93,8 +98,6 @@ void isn_usbuart_init(isn_usbuart_t *obj, int mode, isn_layer_t* child) {
     obj->child_driver = child;
     obj->buf_locked = 0;
     obj->rx_size = 0;
-    obj->rx_retry = 0;
-    obj->rx_dropped = 0;
 
     USBUART_Start(0, mode);
     while(0 == USBUART_GetConfiguration());

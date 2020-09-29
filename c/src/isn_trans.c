@@ -14,6 +14,7 @@
  * (c) Copyright 2019, Isotel, http://isotel.eu
  */
 
+#include <string.h>
 #include "isn_trans.h"
 
 #define PROTO_SIZE  4
@@ -43,10 +44,10 @@ static int isn_trans_send(isn_layer_t *drv, void *dest, size_t size) {
     dest = buf;
     *(buf++) = ISN_PROTO_TRANL;
     *(buf++) = obj->port;
-    *(buf++) = obj->tx_frame_counter & 0xFF;
-    *buf     = (obj->tx_frame_counter >> 8) & 0x3F;
-    obj->tx_frame_counter++;
-    obj->tx_counter+=size;
+    *(buf++) = obj->drv.stats.tx_packets & 0xFF;
+    *buf     = (obj->drv.stats.tx_packets >> 8) & 0x3F;
+    obj->drv.stats.tx_packets++;
+    obj->drv.stats.tx_counter+=size;
     return obj->parent->send(obj->parent, dest, size+PROTO_SIZE);
 }
 
@@ -54,13 +55,15 @@ static size_t isn_trans_recv(isn_layer_t *drv, const void *src, size_t size, isn
     isn_trans_t *obj = (isn_trans_t *)drv;
     const uint8_t *buf = src;
     if (*buf == ISN_PROTO_TRANL) {
-        obj->rx_counter += size - PROTO_SIZE;
+        obj->drv.stats.rx_counter += size - PROTO_SIZE;
+        obj->drv.stats.rx_packets++;
         return obj->child->recv(obj->child, buf+PROTO_SIZE, size-PROTO_SIZE, drv) + PROTO_SIZE;
     }
     return 0;
 }
 
 void isn_translong_init(isn_trans_t *obj, isn_layer_t* child, isn_layer_t* parent, uint8_t port) {
+    memset(&obj->drv, 0, sizeof(obj->drv));
     obj->drv.getsendbuf = isn_trans_getsendbuf;
     obj->drv.send       = isn_trans_send;
     obj->drv.recv       = isn_trans_recv;
@@ -68,9 +71,6 @@ void isn_translong_init(isn_trans_t *obj, isn_layer_t* child, isn_layer_t* paren
     obj->parent         = parent;
     obj->child          = child;
     obj->port           = port;
-    obj->rx_counter     = 0;
-    obj->tx_counter     = 0;
-    obj->tx_frame_counter=0;
 }
 
 /** \} \endcond */

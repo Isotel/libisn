@@ -32,10 +32,11 @@ static void send_packet(isn_message_t *obj, uint8_t msgflags, const void* data, 
         *(buf+1) = msgflags;
         memcpy(buf+2, data, size);
         obj->parent_driver->send(obj->parent_driver, buf, xsize);
-        obj->tx_packets++;
+        obj->drv.stats.tx_packets++;
+        obj->drv.stats.tx_counter+=size-2;
         return;
     }
-    obj->tx_dropped++;
+    obj->drv.stats.tx_dropped++;
     obj->parent_driver->free(obj->parent_driver, dest);   // we're ok to free NULL to simplify code
 }
 
@@ -197,6 +198,7 @@ static size_t isn_message_recv(isn_layer_t *drv, const void *src, size_t size, i
         data_size = 0;
     }
     if (data_size > 0 && (obj->isn_msg_received_data != NULL || data_size != obj->isn_msg_table[msgnum].size)) {
+        obj->drv.stats.rx_dropped++;
         return 0;  // we cannot handle multiple receive buffer requests atm, nor wrong input sizes
     }
 
@@ -214,6 +216,8 @@ static size_t isn_message_recv(isn_layer_t *drv, const void *src, size_t size, i
     }
     else if (msgnum == obj->lock) obj->lock = 0;
     obj->msgnum = msgnum;   // speed-up response time to all incoming request and to release incoming buffer
+    obj->drv.stats.rx_packets++;
+    obj->drv.stats.rx_counter += data_size;
     return size;
 }
 
@@ -240,6 +244,7 @@ static void sanity_check(isn_message_t *obj) {
 }
 
 void isn_msg_init(isn_message_t *obj, isn_msg_table_t* messages, uint8_t size, isn_layer_t* parent) {
+    memset(&obj->drv, 0, sizeof(obj->drv));
     obj->drv.recv = isn_message_recv;
     obj->parent_driver = parent;
     obj->isn_msg_table = messages;
@@ -252,8 +257,6 @@ void isn_msg_init(isn_message_t *obj, isn_msg_table_t* messages, uint8_t size, i
     obj->pending = 1;
     obj->lock = 0;
     obj->msgnum = 0;
-    obj->tx_dropped = 0;
-    obj->tx_packets = 0;
     obj->resend_timer = 0;
     isn_msg_self = obj;
     sanity_check(obj);

@@ -97,7 +97,8 @@ static int isn_uart_send(isn_layer_t *drv, void *dest, size_t size) {
     if (size) {
         while( !UART_TX_is_ready(size) );   // todo: timeout assert
         UART_PutArray(dest, size);
-        obj->tx_counter += size;
+        obj->drv.stats.tx_counter += size;
+        obj->drv.stats.tx_packets++;
     }
     isn_uart_free(drv, dest);           // free buffer, however need to block use of buffer until sent out
     return size;
@@ -114,14 +115,15 @@ int isn_uart_poll(isn_uart_t *obj) {
         if ( size ) {
             UART_GetArray(&obj->rxbuf[obj->rx_size], size);
             obj->rx_size += size;
-            obj->rx_counter += size;
+            obj->drv.stats.rx_counter += size;
         }
-        else obj->rx_dropped++; // It hasn't been really dropped yet
+        else obj->drv.stats.rx_dropped++; // It hasn't been really dropped yet \todo Read overflow from low-level driver
     }
     if (obj->rx_size) {
         size = obj->child_driver->recv(obj->child_driver, obj->rxbuf, obj->rx_size, &obj->drv);
+        if (size) obj->drv.stats.rx_packets++;
         if (size < obj->rx_size) {
-            obj->rx_retry++;    // Packet could not be fully accepted, retry next time
+            obj->drv.stats.rx_retries++;    // Packet could not be fully accepted, retry next time
             memmove(obj->rxbuf, &obj->rxbuf[size], obj->rx_size - size);
             obj->rx_size -= size;
         }
@@ -138,23 +140,26 @@ int isn_uart_collect(isn_uart_t *obj, size_t maxsize, volatile uint32_t *counter
         if ( size ) {
             UART_GetArray(&obj->rxbuf[obj->rx_size], size);
             obj->rx_size += size;
-            obj->rx_counter += size;
+            obj->drv.stats.rx_counter += size;
             ts = *counter;
         }
-        else obj->rx_dropped++; // It hasn't been really dropped yet \todo Read overflow from low-level driver
+        else obj->drv.stats.rx_dropped++; // It hasn't been really dropped yet \todo Read overflow from low-level driver
     }
     if (obj->rx_size >= maxsize || ((*counter - ts) > timeout && obj->rx_size > 0)) {
         size = obj->child_driver->recv(obj->child_driver, obj->rxbuf, obj->rx_size > maxsize ? maxsize : obj->rx_size, &obj->drv);
+        if (size) obj->drv.stats.rx_packets++;
         if (size < obj->rx_size) {
-            obj->rx_retry++;    // Packet could not be fully accepted, retry next time
+            obj->drv.stats.rx_retries++;    // Packet could not be fully accepted, retry next time
             memmove(obj->rxbuf, &obj->rxbuf[size], obj->rx_size - size);
+            obj->rx_size -= size;
         }
-        obj->rx_size -= size;
+        else obj->rx_size = 0;  // handles case if recv() returns size higher than rx_size
     }
     return size;
 }
 
 void isn_uart_init(isn_uart_t *obj, isn_layer_t* child) {
+    memset(&obj->drv, 0, sizeof(obj->drv));
     obj->drv.getsendbuf = isn_uart_getsendbuf;
     obj->drv.send = isn_uart_send;
     obj->drv.recv = NULL;
@@ -162,9 +167,6 @@ void isn_uart_init(isn_uart_t *obj, isn_layer_t* child) {
     obj->child_driver = child;
     obj->buf_locked = 0;
     obj->rx_size    = 0;
-    obj->rx_dropped = 0;
-    obj->rx_counter = 0;
-    obj->tx_counter = 0;
     UART_Start();
 }
 

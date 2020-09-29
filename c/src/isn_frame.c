@@ -14,6 +14,7 @@
  * (c) Copyright 2019, Isotel, http://isotel.eu
  */
 
+#include <string.h>
 #include "isn_frame.h"
 
 /**\{ */
@@ -62,6 +63,8 @@ static int isn_frame_send(isn_layer_t *drv, void *dest, size_t size) {
     uint8_t *buf = dest;
     uint8_t *start = --buf;
     assert(size <= ISN_FRAME_MAXSIZE);
+    obj->drv.stats.tx_packets++;
+    obj->drv.stats.tx_counter += size;
     *buf = 0xC0 - 1 + size;             // Header, assuming short frame
     if (obj->crc_enabled) {
         *buf ^= 0x40;                   // Update header for the CRC (0x40 was set just above)
@@ -78,8 +81,11 @@ static int isn_frame_send(isn_layer_t *drv, void *dest, size_t size) {
 #define IS_IN_MESSAGE   1
 
 #define FORWARD_MSG     \
-        if (obj->child->recv(obj->child, obj->recv_buf, obj->recv_size, drv) != obj->recv_size) {   \
+        obj->drv.stats.rx_packets++; \
+        obj->drv.stats.rx_counter += obj->recv_size; \
+        if (obj->child->recv(obj->child, obj->recv_buf, obj->recv_size, drv) < obj->recv_size) {   \
             if (obj->other) obj->other->recv(obj->other, obj->recv_buf, obj->recv_size, caller);    \
+            else obj->drv.stats.rx_retries++; \
         }
 
 static size_t isn_frame_recv(isn_layer_t *drv, const void *src, size_t size, isn_layer_t *caller) {
@@ -89,7 +95,7 @@ static size_t isn_frame_recv(isn_layer_t *drv, const void *src, size_t size, isn
     if ((*(obj->sys_counter) - obj->last_ts) > obj->frame_timeout) {
         obj->state = IS_NONE;
         if (obj->recv_len) {
-            obj->rx_errors++;
+            obj->drv.stats.rx_dropped++;
         }
         obj->recv_size = obj->recv_len = 0;
     }
@@ -118,10 +124,9 @@ static size_t isn_frame_recv(isn_layer_t *drv, const void *src, size_t size, isn
                 if (obj->recv_size == obj->recv_len && obj->crc_enabled) {
                     if (*buf == obj->crc) {
                         FORWARD_MSG;
-                        obj->rx_frames++;
                     }
                     else {
-                        obj->rx_errors++;
+                        obj->drv.stats.rx_errors++;
                     }
                     obj->recv_size = obj->recv_len = 0;
                     obj->state = IS_NONE;
@@ -135,7 +140,6 @@ static size_t isn_frame_recv(isn_layer_t *drv, const void *src, size_t size, isn
                         FORWARD_MSG;
                         obj->recv_size = obj->recv_len = 0;
                         obj->state = IS_NONE;
-                        obj->rx_frames++;
                     }
                 }
                 break;
@@ -154,6 +158,7 @@ static size_t isn_frame_recv(isn_layer_t *drv, const void *src, size_t size, isn
 void isn_frame_init(isn_frame_t *obj, isn_frame_mode_t mode, isn_layer_t* child, isn_layer_t* other, isn_layer_t* parent, volatile const uint32_t *counter, uint32_t timeout) {
     assert(parent);
     assert(child);
+    memset(&obj->drv, 0, sizeof(obj->drv));
 
     obj->drv.getsendbuf   = isn_frame_getsendbuf;
     obj->drv.send         = isn_frame_send;
@@ -170,8 +175,6 @@ void isn_frame_init(isn_frame_t *obj, isn_frame_mode_t mode, isn_layer_t* child,
     obj->state            = IS_NONE;
     obj->recv_size        = 0;
     obj->recv_len         = 0;
-    obj->rx_frames        = 0;
-    obj->rx_errors        = 0;
     obj->last_ts          = 0;
 }
 

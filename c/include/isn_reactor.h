@@ -80,14 +80,22 @@ isn_reactor_mutex_t isn_reactor_getmutex();
  */
 int isn_reactor_mutexqueue(const isn_reactor_tasklet_t tasklet, const void* arg, isn_reactor_mutex_t mutex_bits);
 
-/** Lock given mutex bit(s), one or more at the same time, which will stop execution of tasklets in the same mutex group */
-isn_reactor_mutex_t isn_reactor_mutex_lock(isn_reactor_mutex_t mutex_bits);
+/** Lock given mutex bit(s), one or more at the same time, which will stop execution of 
+ *  tasklets in the same mutex group 
+ * 
+ *  \param mutexbit obtained with the isn_reactor_getmutex() 
+ *  \returns 0 on success if lock was obtained, non-zero indiates that this particulr mutex was already locked
+ */
+int isn_reactor_mutex_lock(isn_reactor_mutex_t mutex_bits);
 
-/** Unlock mutex bits */
-isn_reactor_mutex_t isn_reactor_mutex_unlock(isn_reactor_mutex_t mutex_bits);
+/** Unlock mutex bits 
+ *  \param mutexbit obtained with the isn_reactor_getmutex() 
+ *  \returns 0 on success, non-zero if lock was already released
+ */
+int isn_reactor_mutex_unlock(isn_reactor_mutex_t mutex_bits);
 
 /** \returns non-zero if locked */
-isn_reactor_mutex_t isn_reactor_mutex_is_locked(isn_reactor_mutex_t mutex_bits);
+int isn_reactor_mutex_is_locked(isn_reactor_mutex_t mutex_bits);
 
 /** Is tasklet still pending in the queue, given by exact specs to ensure full integrity
  *
@@ -102,6 +110,12 @@ int isn_reactor_isvalid(int index, const isn_reactor_tasklet_t tasklet, const vo
  * \returns 0 if no-longer in queue or invalid index, and 1 when modified successfully
  */
 int isn_reactor_change_timed(int index, const isn_reactor_tasklet_t tasklet, const void* arg, isn_reactor_time_t newtime);
+
+/** Modify time for reoccuring (self-triggered) event, from the event.
+ *  So the function modifies the time of the active event and only has effect
+ *  if event returns with a pointer to itself.
+ */
+int isn_reactor_change_timed_self(isn_reactor_time_t newtime);
 
 /** Drop specific tasklet
  * \returns 0 if no-longer in queue or invalid index, and 1 when modified successfully
