@@ -157,12 +157,14 @@ uint8_t isn_msg_resend_queries(isn_message_t *obj, uint32_t timeout) {
         if (obj->lock) {
             obj->isn_msg_table[obj->lock].priority = ISN_MGG_PRI_UPDATE_ARGS;
             obj->lock = 0;
+            obj->drv.stats.tx_retries++;
             count++;
         }
         for (uint8_t msgnum = 0; msgnum < obj->isn_msg_table_size; msgnum++) {
             if (obj->isn_msg_table[msgnum].priority == ISN_MSG_PRI_QUERY_WAIT) {
                 obj->isn_msg_table[msgnum].priority = ISN_MSG_PRI_QUERY_ARGS;
                 count++;
+                obj->drv.stats.tx_retries++;
             }
         }
     }

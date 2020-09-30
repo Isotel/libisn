@@ -108,30 +108,6 @@ static int isn_uart_send(isn_layer_t *drv, void *dest, size_t size) {
  * Check if there are new bytes pending in the buffer, and collect them in the RX buffer.
  * In the next step try to forward data as long they're not accepted by the receiver.
  */
-int isn_uart_poll(isn_uart_t *obj) {
-    size_t size = UART_GetNumInRxFifo();
-    if (size) {
-        if ( (size + obj->rx_size) > UART_RXBUF_SIZE ) size = UART_RXBUF_SIZE - obj->rx_size;
-        if ( size ) {
-            UART_GetArray(&obj->rxbuf[obj->rx_size], size);
-            obj->rx_size += size;
-            obj->drv.stats.rx_counter += size;
-        }
-        else obj->drv.stats.rx_dropped++; // It hasn't been really dropped yet \todo Read overflow from low-level driver
-    }
-    if (obj->rx_size) {
-        size = obj->child_driver->recv(obj->child_driver, obj->rxbuf, obj->rx_size, &obj->drv);
-        if (size) obj->drv.stats.rx_packets++;
-        if (size < obj->rx_size) {
-            obj->drv.stats.rx_retries++;    // Packet could not be fully accepted, retry next time
-            memmove(obj->rxbuf, &obj->rxbuf[size], obj->rx_size - size);
-            obj->rx_size -= size;
-        }
-        else obj->rx_size = 0;  // handles case if recv() returns size higher than rx_size
-    }
-    return size;
-}
-
 int isn_uart_collect(isn_uart_t *obj, size_t maxsize, const volatile uint32_t *counter, uint32_t timeout) {
     static uint32_t ts = 0;
     size_t size = UART_GetNumInRxFifo();
@@ -156,6 +132,11 @@ int isn_uart_collect(isn_uart_t *obj, size_t maxsize, const volatile uint32_t *c
         else obj->rx_size = 0;  // handles case if recv() returns size higher than rx_size
     }
     return size;
+}
+
+int isn_uart_poll(isn_uart_t *obj) {
+    uint32_t dummy_counter = 0;
+    return isn_uart_collect(obj, 1, &dummy_counter, 0);
 }
 
 void isn_uart_init(isn_uart_t *obj, isn_layer_t* child) {
