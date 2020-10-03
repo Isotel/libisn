@@ -1,13 +1,15 @@
 /** \file
  *  \brief ISN Message Layer
- *  \author Uros Platise <uros@isotel.eu>
- *  \see https://www.isotel.eu/isn/message.html
- *
- * \defgroup GR_ISN_Message ISN Driver for Message Layer
+ *  \author Uros Platise <uros@isotel.org>
+ *  \see https://www.isotel.org/isn/message.html
+ */
+/**
+ * \ingroup GR_ISN
+ * \defgroup GR_ISN_Message Message Layer Driver
  *
  * # Scope
  *
- * Implements Device side of the [ISN Message Layer Protocol](https://www.isotel.eu/isn/message.html)
+ * Implements Device side of the [ISN Message Layer Protocol](https://www.isotel.org/isn/message.html)
  * with direct mapping of C structures to messages and easy to use callback API.
  * A message layer creates a virtual device at the external entity that may hold up to 128
  * messages, each long of about 128 bytes (64 bytes for description and 64 bytes for variable
@@ -117,23 +119,82 @@
  *    it should specify the priority from `ISN_MSG_PRI_LOW` to `ISN_MSG_PRI_HIGHEST`
  *    preferably by using macros.
  *
- * # Requesting for data
+ * # Requesting for Data or Updating the Data
  *
  * Message layer allows to send request to other device for arguments using the
- * isn_msg_send() or isn_msg_sendqby() and providing ISN_MSG_PRI_QUERY_ARGS for
- * priority field. After a request to receive arguments is sent, message is
- * locked into the ISN_MSG_PRI_QUERY_WAIT state in which it will not send
- * out any data until a valid reply is received.
+ * isn_msg_send() or isn_msg_sendqby() and providing ISN_MSG_PRI_QUERY_ARGS
+ * for the priority field. After a request to receive the arguments is sent, message is 
+ * locked into the ISN_MSG_PRI_QUERY_WAIT state, in which it 
+ * will not send out any data until a valid reply is received.
+ * 
+ * Example of a communication flow between two devices:
+ *\msc
+ *  width = "1000";
+ *  R [label="Requester"], A [label="Message Layer"], B [label="Message Layer"], T [label="Target"];
+ * 
+ *  R => A [label="isn_msg_sendqby(.., my_message_cb, ISN_MSG_PRI_QUERY_ARGS)"];
+ *  A -x B [label="ISN_MSG_PRI_QUERY_ARGS"];
+ *  A => A [label="ISN_MSG_PRI_QUERY_WAIT"];
+ *  |||;
+ *  --- [label="Waiting for response, which never arrives"];
+ *  |||;
+ *  A => A [label="isn_msg_resend_queries"];
+ *  A -> B [label="ISN_MSG_PRI_QUERY_ARGS"];
+ *  A => A [label="ISN_MSG_PRI_QUERY_WAIT"];
+ *  B => T [label="my_message_cb()"];
+ *  B << T [label="return &data"];
+ *  B -> A [label="ISN_MSG_PRI_HIGHEST"];
+ *  A => A [label="ISN_MSG_PRI_CLEAR"];
+ *  R <<= A [label="my_message_cb(data)"];
+ *\endmsc
+ *
+ * Similarly one devices needs to update arguments (send data) to
+ * other device, which is done by setting the priority ISN_MGG_PRI_UPDATE_ARGS.
+ * Message layer itself employs single input buffer. At higher reception rate
+ * buffer is to be provided by the receiving layer. However, when 
+ * ISN_MGG_PRI_UPDATE_ARGS is used to send a message, then further transmissions
+ * are blocked to ensure buffer overflow does not happen at the receiving device.
+ * Updating arguments handle another special case:
+ * 
+ * - while transaction is in progress, requester may send another update,
+ *   and thus ignoring previous transaction, looks like this:
+ * 
+ *\msc
+ *  width = "1000";
+ *  R [label="Requester"], A [label="Message Layer"], B [label="Message Layer"], T [label="Target"];
+ * 
+ *  R => A [label="isn_msg_sendqby(.., my_message_cb, ISN_MSG_PRI_UPDATE_ARGS)"];
+ *  R <<= A [label="my_message_cb()"];
+ *  R >> A [label="return &data"];
+ *  A -> B [label="ISN_MSG_PRI_UPDATE_ARGS"];
+ *  A => A [label="sending locked"];
+ *  B => T [label="my_message_cb(data)"];
+ *  B << T [label="return &data"];
+ *  |||;
+ *  --- [label="Updated Request"];
+ *  |||;
+ *  R => A [label="isn_msg_sendqby(.., my_message_cb, ISN_MSG_PRI_UPDATE_ARGS)"];
+ *  B -> A [label="ISN_MSG_PRI_HIGHEST"];
+ *  A => A [label="ignored"];
+ *  R <<= A [label="my_message_cb()"];
+ *  R >> A [label="return &data"];
+ *  A -> B [label="ISN_MSG_PRI_UPDATE_ARGS"];
+ *  B => T [label="my_message_cb(data)"];
+ *  B << T [label="return &data"];
+ *  B -> A [label="ISN_MSG_PRI_HIGHEST"];
+ *  A => A [label="sending unlocked"];
+ *  R <<= A [label="my_message_cb(data)"];
+ *\endmsc
  *
  * Unlocking a message from this state occurs when:
  *
- * - other party requests to receive a description, or it is send by this
+ * - by periodically calling the isn_msg_resend_queries() which resends pending
+ *   transactions, both ISN_MSG_PRI_QUERY_ARGS and the ISN_MGG_PRI_UPDATE_ARGS,
+ * - or by using the priority ISN_MSG_PRI_CLEAR to clear specific requests, or
+ * - if other party requests to receive a description, or it is send by this
  *   device providing ISN_MSG_PRI_DESCRIPTION to priority, which clearly
  *   means that the other device has no clue about us, so it cannot provide
  *   us with the arguments
- * - by using the priority ISN_MSG_PRI_UNLOCK_ARGS
- *   which will send out arguments with the highest prioity,
- * - or by using the priority ISN_MSG_PRI_CLEAR to clear the request.
  *
  * If other device requests arguments while a message is in the
  * ISN_MSG_PRI_QUERY_WAIT state, such requests are ignored. If none
@@ -165,7 +226,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
- * (c) Copyright 2019, Isotel, http://isotel.eu
+ * (c) Copyright 2019, Isotel, http://isotel.org
  */
 
 
@@ -197,7 +258,6 @@ extern "C" {
 
 #define ISN_MSG_PRI_DESCRIPTION     31      ///< Standard high priority description
 #define ISN_MSG_PRI_DESCRIPTIONLOW  30      ///< Lower priority description, used in fast loading
-#define ISN_MSG_PRI_UNLOCK_ARGS     29      ///< The very highest unlocking priority for sending args
 //#define ISN_MSG_PRI_QUERY_DESC    28      ///< Request for description, NOT SUPPORTED YET
 #define ISN_MSG_PRI_QUERY_ARGS      27      ///< Request for arguments
 #define ISN_MSG_PRI_QUERY_WAIT      26      ///< Wait for reply
@@ -253,20 +313,23 @@ extern isn_message_t *isn_msg_self;
 
 /** Initialize Message Layer
  *
- * \arg message a pointer to application table of messages
- * \arg size of the table, which is equalt to number of messages in a table
+ * \param obj
+ * \param messages a pointer to application table of messages
+ * \param size of the table, which is equalt to number of messages in a table
+ * \param parent object
  */
 void isn_msg_init(isn_message_t *obj, isn_msg_table_t* messages, uint8_t size, isn_layer_t* parent);
 
-
 /** Schedule received callbacks and send those marked by isn_msg_send() or isn_msg_sendby()
  *
+ * \param obj
  * \returns 0 when no more messages are pending for transmission
  */
 int isn_msg_sched(isn_message_t *obj);
 
 /** Send message
  *
+ * \param obj
  * \param message_id
  * \param priority defines order in which messages are sent out.
  *        Setting MSB bit 0x80 will request to send out descriptors instead of a data
@@ -274,20 +337,28 @@ int isn_msg_sched(isn_message_t *obj);
 void isn_msg_send(isn_message_t *obj, uint8_t message_id, uint8_t priority);
 
 /** Send message quickly by callback handler given msgnum, start of the search
+ * 
+ * Typical usage:
+ * \code
+ *    uint8_t msg1_idx = 0;
+ *    msg1_idx = isn_msg_sendqby(obj, msg1_cb, ISN_MSG_PRI_NORMAL, msg1_idx);
+ * \endcode
  *
- * \param isn_msg_handler_t
+ * \param obj
+ * \param hnd
  * \param priority defines order in which messages are sent out.
  *        Setting MSB bit 0x80 will request to send out descriptors instead of a data
- * \param returns message_id on success otherwise 0xFF
+ * \param msgnum index to message_id previously provided by this same function to speed up the search.
+ * \returns message_id on success otherwise 0xFF
  */
 uint8_t isn_msg_sendqby(isn_message_t *obj, isn_events_handler_t hnd, uint8_t priority, uint8_t msgnum);
 
 /** Send message by callback handler
  *
- * \param isn_msg_handler_t
+ * \param obj
+ * \param hnd
  * \param priority defines order in which messages are sent out.
- *        Setting MSB bit 0x80 will request to send out descriptors instead of a data
- * \param returns message_id on success otherwise 0xFF
+ * \return message_id on success otherwise 0xFF
  */
 static inline uint8_t isn_msg_sendby(isn_message_t *obj, isn_events_handler_t hnd, uint8_t priority) {return isn_msg_sendqby(obj,hnd,priority,0);}
 
@@ -299,11 +370,11 @@ static inline uint8_t isn_msg_sendby(isn_message_t *obj, isn_events_handler_t hn
  * value is not 0 means other party is not responding, indicating some issues on the other 
  * side. The parameter timeout if 0, means that rescheduling is done on each call 
  * for events marked as ISN_MGG_PRI_UPDATE_ARGS and ISN_MSG_PRI_QUERY_WAIT. If timeout
- * is 1, or higher, then reschedulling starts after 1, or 2, call to this function.
+ * is 1, or higher, then re-scheduling starts after 1, or 2, call to this function.
  *
- * \param isn_handler_t
- * \param timeout, number of calls to this routine after which resend actually takes progress
- * \returns number of query messages marked for re-transmission
+ * \param obj
+ * \param timeout as a number of calls to this routine after which resend actually takes progress
+ * \returns Message count marked for re-transmission
  */
 uint8_t isn_msg_resend_queries(isn_message_t *obj, uint32_t timeout);
 
@@ -312,7 +383,9 @@ uint8_t isn_msg_resend_queries(isn_message_t *obj, uint32_t timeout);
  * to a callback argument from message layer.
  *
  * Useful if same callback event is called from multiple sources.
- *
+ * 
+ * \param obj
+ * \param arg pointer to data provided by the callback 
  * \returns Non-zero if valid and argument is non-zero, otherwise 0
  */
 int isn_msg_isinput_valid(isn_message_t *obj, const void *arg);
@@ -321,6 +394,9 @@ int isn_msg_isinput_valid(isn_message_t *obj, const void *arg);
  * To be used within the callback, it may ask with which priority
  * was it called to be able to distinguish also from external
  * (HIGHEST) queries and internal ones
+ * 
+ * \param obj
+ * \returns Non-zero if request is query
  */
 static inline int isn_msg_isquery(isn_message_t *obj) {return obj->handler_priority == ISN_MSG_PRI_HIGHEST;}
 
@@ -328,6 +404,7 @@ static inline int isn_msg_isquery(isn_message_t *obj) {return obj->handler_prior
  * To be used within the callback, it may ask if data is a
  * reply to previously sent out query.
  * 
+ * \param obj
  * \returns non-zero if message is a response to a ISN_MSG_PRI_QUERY_ARGS or just 
  *          in-time received message (clears ISN_MSG_PRI_QUERY_ARGS)
  */

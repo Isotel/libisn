@@ -1,8 +1,10 @@
 /** \file
  *  \brief ISN Short and Compact (with CRC) Frame Protocol up to 64 B frames Implementation
- *  \author Uros Platise <uros@isotel.eu>
+ *  \author Uros Platise <uros@isotel.org>
  *  \see isn_frame.h
- *
+ */
+/**
+ * \ingroup GR_ISN
  * \cond Implementation
  * \addtogroup GR_ISN_Frame
  */
@@ -11,7 +13,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
- * (c) Copyright 2019, Isotel, http://isotel.eu
+ * (c) Copyright 2019, Isotel, http://isotel.org
  */
 
 #include <string.h>

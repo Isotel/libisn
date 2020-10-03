@@ -1,8 +1,10 @@
 /** \file
  *  \brief ISN USBUART Driver for PSoC4 and PSoC5 Implementation
- *  \author Uros Platise <uros@isotel.eu>
+ *  \author Uros Platise <uros@isotel.org>
  *  \see isn_usbuart.h
- * 
+ */
+/**
+ * \ingroup GR_ISN_PSoC
  * \addtogroup GR_ISN_PSoC_USBUART
  * 
  * # Tested
@@ -16,7 +18,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  * 
- * (c) Copyright 2019, Isotel, http://isotel.eu
+ * (c) Copyright 2019, Isotel, http://isotel.org
  */
 
 #include <string.h>

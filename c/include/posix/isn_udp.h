@@ -1,7 +1,8 @@
 /** \file
  *  \brief ISN UDP Driver Implementation
- *  \author Stanislav <stanislav@isotel.eu>, Uros Platise <uros@isotel.eu>
- *
+ */
+/**
+ * \ingroup GR_ISN_POSIX
  * \defgroup GR_ISN_UDP ISN POSIX UDP Driver
  *
  * # Scope
@@ -25,7 +26,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  * 
- * (c) Copyright 2019, Isotel, http://isotel.eu
+ * (c) Copyright 2019, Isotel, http://isotel.org
  */
 
 #ifndef ISN_UDP_DRIVER_H
@@ -55,7 +56,7 @@ isn_udp_driver_t *isn_udp_driver_create(uint16_t serverport, isn_layer_t *child,
 /**
  * Add a new UDP client
  * 
- * \param isn_udp_driver_t structure
+ * \param driver structure
  * \param hostname a string containing either hostname or IP
  * \param port is a string containing service name or port number
  * \returns non-zero on success

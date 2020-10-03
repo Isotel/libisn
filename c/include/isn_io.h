@@ -1,9 +1,11 @@
 /** \file
  *  \brief ISN Protocol I/O
- *  \author Uros Platise <uros@isotel.eu>
+ *  \author Uros Platise <uros@isotel.org>
  *  \see isn_io.c
- *
- * \defgroup GR_ISN_IO ISN I/O Methods
+ */
+/**
+ * \ingroup GR_ISN
+ * \defgroup GR_ISN_IO I/O Methods
  *
  * # Scope
  *
@@ -14,7 +16,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
- * (c) Copyright 2020, Isotel, http://isotel.eu
+ * (c) Copyright 2020, Isotel, http://isotel.org
  */
 
 #ifndef __ISN_IO_H__

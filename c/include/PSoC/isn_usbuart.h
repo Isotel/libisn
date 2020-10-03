@@ -1,9 +1,9 @@
 /** \file
  *  \brief ISN USBUART Driver for PSoC4 and PSoC5
- *  \author Uros Platise <uros@isotel.eu>
+ *  \author Uros Platise <uros@isotel.org>
  *  \see isn_usbuart.c
  * 
- * \defgroup GR_ISN_PSoC_USBUART ISN Driver for PSoC USBUART
+ * \defgroup GR_ISN_PSoC_USBUART PSoC USBUART Driver
  * 
  * # Scope
  * 
@@ -29,7 +29,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  * 
- * (c) Copyright 2019, Isotel, http://isotel.eu
+ * (c) Copyright 2019, Isotel, http://isotel.org
  */
 
 
@@ -66,6 +66,7 @@ size_t isn_usbuart_poll(isn_usbuart_t *obj);
 
 /** Initialize
  * 
+ * \param obj
  * \param mode USBUART_3V_OPERATION
  * \param child use the next layer, like isn_frame
  */

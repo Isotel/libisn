@@ -1,13 +1,15 @@
 /** \file
  *  \brief ISN Transport Layer
- *  \author Uros Platise <uros@isotel.eu>
- *  \see https://www.isotel.eu/isn/transport.html
- * 
- * \defgroup GR_ISN_Trans ISN Driver for Transport Layer
+ *  \author Uros Platise <uros@isotel.org>
+ *  \see https://www.isotel.org/isn/transport.html
+ */
+/**
+ * \ingroup GR_ISN
+ * \defgroup GR_ISN_Trans Transport Layer Driver
  * 
  * # Scope
  * 
- * Implements Device side of the [ISN Transport Protocol](https://www.isotel.eu/isn/transport.html)
+ * Implements Device side of the [ISN Transport Protocol](https://www.isotel.org/isn/transport.html)
  * 
  * \note Specs are unaligned: tx counter is 16-bit and little endian
  * 
@@ -23,7 +25,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  * 
- * (c) Copyright 2019, Isotel, http://isotel.eu
+ * (c) Copyright 2019, Isotel, http://isotel.org
  */
 
 #ifndef __ISN_TRANS_H__
@@ -57,6 +59,7 @@ isn_trans_t;
 
 /** Initialize Long Transport Layer
  * 
+ * \param obj
  * \param child layer
  * \param parent protocol layer, which is typically a PHY, or FRAME
  * \param port (not implemented)

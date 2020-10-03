@@ -1,8 +1,10 @@
 /** \file
  *  \brief Clock Implementation
- *  \author Uros Platise <uros@isotel.eu>
+ *  \author Uros Platise <uros@isotel.org>
  *  \see \ref GR_ISN_CLOCK, isn_clock.h
- *
+ */
+/**
+ * \ingroup GR_ISN_PSoC
  * \addtogroup GR_ISN_CLOCK
  *
  * \cond Implementation

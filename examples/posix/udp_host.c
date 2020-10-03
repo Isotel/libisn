@@ -1,6 +1,6 @@
 /** \file
  *  \brief Example of UDP Server
- *  \author Uros Platise <uros@isotel.eu>
+ *  \author Uros Platise <uros@isotel.org>
  */
 
 #include <errno.h>

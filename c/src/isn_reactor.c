@@ -1,12 +1,17 @@
 /** \file
  *  \brief Isotel Sensor Network Reactor Implementation
- *  \author <uros@isotel.eu>, <stanislav@isotel.eu>,
- *
+ *  \author <uros@isotel.org>
+ */
+/**
+ * \ingroup GR_ISN
+ * \cond Implementation
+ * \addtogroup GR_ISN_Reactor
+ 
  * Implementation of a very reduced and simple reactor,
  * supporting qeued tasklets offering timed execution,
  * mutex locking, and return to callers.
  *
- * Currently supported and tested on Cypress PSoC5 only.
+ * Currently supported and tested on Cypress PSoC5 and PSoC6.
  */
 /*
     QUEUE: Instead of a FIFO single linked list is used to be able to implement simple mutex locking
@@ -78,6 +83,8 @@
 #define QUEUE_MUTEX(i)              ((uint32_t)(queue_table[i].tasklet) & (MUTEX_MASK << MUTEX_SHIFT))
 #define QUEUE_FUNC_VALID(i)         (void *)((uint32_t)(queue_table[i].tasklet) & FUNC_ADDR_MASK)
 #define QUEUE_TIME(i)               queue_table[i].time
+
+/**\{ */
 
 isn_reactor_time_t _isn_reactor_active_timestamp;
 const volatile isn_reactor_time_t* _isn_reactor_timer;
@@ -228,8 +235,6 @@ int isn_reactor_dropall(const isn_reactor_tasklet_t tasklet, const void* arg) {
  *   - on any mutex release change, reset head to 0
  *
  *  \todo 2nd optimization is to perform timed bubble sort while looping thru the list
- *
- *  \todo Handle caller return codes to support re-triggering actions
  */
 int isn_reactor_step(void) {
     int executed = 0;
@@ -318,3 +323,5 @@ void isn_reactor_init(isn_tasklet_entry_t *tasklet_queue, size_t queue_size, con
     isn_tasklet_queue_max = 0;
     for (uint8_t i=0; i<queue_len; i++) QUEUE_LINKANDCLEAR(i, i+1);
 }
+
+/** \} \endcond */

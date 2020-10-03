@@ -1,8 +1,11 @@
 /** \file
  *  \brief Clock
- *  \author Uros Platise <uros@isotel.eu>
+ *  \author Uros Platise <uros@isotel.org>
  *  \see \ref GR_ISN_CLOCK, isn_clock.c
- *
+ */
+
+/**
+ * \ingroup GR_ISN
  * \defgroup GR_ISN_CLOCK Base System Clock
  *
  * # Scope

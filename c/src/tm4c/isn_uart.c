@@ -1,8 +1,10 @@
 /** \file
  *  \author Nelson Gaston Sanchez <gaston.sanchez@dewesoft.com>
  *  \see isn_uart.h
- *
- * \addtogroup GR_ISN_PSoC_UART
+ */
+/**
+ * \ingroup GR_ISN_TM4C
+ * \addtogroup GR_ISN_TM4C_UART
  *
  * # Tested
  *

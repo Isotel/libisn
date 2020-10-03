@@ -1,9 +1,9 @@
 /** \file
  *  \brief ISN UART Driver for PSoC4, PSoC5, and PSoC6
- *  \author Uros Platise <uros@isotel.eu>
+ *  \author Uros Platise <uros@isotel.org>
  *  \see isn_uart.c
  *
- * \defgroup GR_ISN_PSoC_UART ISN Driver for PSoC UART
+ * \defgroup GR_ISN_PSoC_UART PSoC UART Driver
  *
  * # Scope
  *
@@ -24,7 +24,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
- * (c) Copyright 2019, Isotel, http://isotel.eu
+ * (c) Copyright 2019, Isotel, http://isotel.org
  */
 
 #ifndef __ISN_UART_H__
@@ -65,6 +65,7 @@ int isn_uart_collect(isn_uart_t *obj, size_t maxsize, const volatile uint32_t *c
 
 /** Initialize
  *
+ * \param obj
  * \param child use the next layer, like isn_frame
  */
 void isn_uart_init(isn_uart_t *obj, isn_layer_t* child);

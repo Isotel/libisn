@@ -1,6 +1,11 @@
 /** \file
  *  \brief Isotel Sensor Network Reactor
- *  \author <uros@isotel.eu>
+ *  \author <uros@isotel.org>
+ */
+/**
+ * \ingroup GR_ISN
+ * \defgroup GR_ISN_Reactor Reactor
+ * \brief Schedules Timed Events with optional Mutexes, and Event-like Library Calls
  */
 
 #ifndef __ISN_REACTOR_H__
@@ -80,21 +85,25 @@ isn_reactor_mutex_t isn_reactor_getmutex();
  */
 int isn_reactor_mutexqueue(const isn_reactor_tasklet_t tasklet, const void* arg, isn_reactor_mutex_t mutex_bits);
 
-/** Lock given mutex bit(s), one or more at the same time, which will stop execution of 
- *  tasklets in the same mutex group 
- * 
- *  \param mutexbit obtained with the isn_reactor_getmutex() 
+/** Lock given mutex bit(s), one or more at the same time, which will stop execution of
+ *  tasklets in the same mutex group
+ *
+ *  \param mutex_bits obtained with the isn_reactor_getmutex()
  *  \returns 0 on success if lock was obtained, non-zero indiates that this particulr mutex was already locked
  */
 int isn_reactor_mutex_lock(isn_reactor_mutex_t mutex_bits);
 
-/** Unlock mutex bits 
- *  \param mutexbit obtained with the isn_reactor_getmutex() 
- *  \returns 0 on success, non-zero if lock was already released
+/** Unlock mutex bits
+ * \param mutex_bits obtained with the isn_reactor_getmutex()
+ * \returns 0 on success, non-zero if lock was already released
  */
 int isn_reactor_mutex_unlock(isn_reactor_mutex_t mutex_bits);
 
-/** \returns non-zero if locked */
+/** Check if locked
+ *
+ * \param mutex_bits obtained with the isn_reactor_getmutex()
+ * \returns non-zero if locked
+ */
 int isn_reactor_mutex_is_locked(isn_reactor_mutex_t mutex_bits);
 
 /** Is tasklet still pending in the queue, given by exact specs to ensure full integrity

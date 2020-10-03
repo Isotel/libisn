@@ -1,8 +1,10 @@
 /** \file
  *  \brief ISN USBFS Bulk USB Driver for PSoC4 and PSoC5 Implementation
- *  \author Uros Platise <uros@isotel.eu>, Stanislav <stanislav@isotel.eu>
+ *  \author Uros Platise <uros@isotel.org>
  *  \see isn_usbfs.h
- *
+ */
+/**
+ * \ingroup GR_ISN_PSoC
  * \addtogroup GR_ISN_PSoC_USBFS
  *
  * # Tested
@@ -21,7 +23,7 @@
  * and by zero-padding technique to fill the entire packet.
  */
 /*
- * (c) Copyright 2019, Isotel, http://isotel.eu
+ * (c) Copyright 2019, Isotel, http://isotel.org
  */
 
 #include "project.h"

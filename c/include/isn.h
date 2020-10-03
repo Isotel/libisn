@@ -1,7 +1,7 @@
 /** \file
  *  \brief ISN Main Library without Platform Specific PHY Drivers
- *  \author Uros Platise <uros@isotel.eu>
- *  \see https://www.isotel.eu/isn
+ *  \author Uros Platise <uros@isotel.org>
+ *  \see https://www.isotel.org/isn
  */
 
 #ifndef __ISN_H__

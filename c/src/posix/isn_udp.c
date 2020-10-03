@@ -1,9 +1,10 @@
 /** \file
  *  \brief ISN UDP Driver Implementation
- *  \author Stanislav <stanislav@isotel.eu>,
- *          Uros Platise <uros@isotel.eu>
+ *          
  *  \see isn_udp_driver.h
- *
+ */
+/**
+ * \ingroup GR_ISN_POSIX
  * \cond Implementation
  * \addtogroup GR_ISN_UDP
  */
@@ -12,7 +13,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
- * (c) Copyright 2019, Isotel, http://isotel.eu
+ * (c) Copyright 2019, Isotel, http://isotel.org
  */
 
 #include <isn.h>
