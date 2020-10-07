@@ -24,7 +24,7 @@ isn_message_t *isn_msg_self;
 
 /**\{ */
 
-static void send_packet(isn_message_t *obj, uint8_t msgflags, const void* data, isn_msg_size_t size) {
+static int send_packet(isn_message_t *obj, uint8_t msgflags, const void* data, isn_msg_size_t size) {
     void *dest = NULL;
     int xsize = size + 2;
 
@@ -36,10 +36,11 @@ static void send_packet(isn_message_t *obj, uint8_t msgflags, const void* data, 
         obj->parent_driver->send(obj->parent_driver, buf, xsize);
         obj->drv.stats.tx_packets++;
         obj->drv.stats.tx_counter+=size-2;
-        return;
+        return size;
     }
     obj->drv.stats.tx_dropped++;
     obj->parent_driver->free(obj->parent_driver, dest);   // we're ok to free NULL to simplify code
+    return 0;
 }
 
 /** Send next message in a round-robin way */
@@ -60,7 +61,9 @@ static int isn_msg_sendnext(isn_message_t *obj) {
             }
 		}
 	}
-    if (picked) {
+    // Reset availability of tx buffer for given argument size, indeed we should also test
+    // for desc loading, however this goes typically one after another
+    if (picked && obj->parent_driver->getsendbuf(obj->parent_driver, NULL, picked->size, (isn_layer_t *)obj) == picked->size) {
         isn_msg_self = obj;
 
         // Set and release locks
