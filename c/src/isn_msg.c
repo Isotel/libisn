@@ -173,7 +173,10 @@ uint8_t isn_msg_resend_queries(isn_message_t *obj, uint32_t timeout) {
             }
         }
     }
-    if (count) obj->resend_timer = 0;
+    if (count) {
+        obj->resend_timer = 0;
+        obj->pending = 1;
+    }
     return count;
 }
 
