@@ -64,7 +64,17 @@ static int isn_msg_sendnext(isn_message_t *obj) {
     // Reset availability of tx buffer for given argument size, indeed we should also test
     // for desc loading, however this goes typically one after another
     if (picked) {
-        if (obj->parent_driver->getsendbuf(obj->parent_driver, NULL, picked->size, (isn_layer_t *)obj) == picked->size) {
+        /*
+         * Find out requred packet size to avoid tx drops
+         * WAIT_ARGS require full picked->size as it is an answer, as all of the messages below that priority
+         * The extra 2 is for the protocol, see send_packet()
+         */
+        size_t required_size;
+             if (picked->priority >= ISN_MSG_PRI_DESCRIPTIONLOW) required_size = strlen(picked->desc) + 2;
+        else if (picked->priority == ISN_MSG_PRI_QUERY_ARGS)     required_size = 2;
+        else                                                     required_size = picked->size + 2;
+
+        if (obj->parent_driver->getsendbuf(obj->parent_driver, NULL, required_size, (isn_layer_t *)obj) == required_size) {
             isn_msg_self = obj;
 
             // Set and release locks
@@ -75,7 +85,7 @@ static int isn_msg_sendnext(isn_message_t *obj) {
             }
 
             if (picked->priority >= ISN_MSG_PRI_DESCRIPTIONLOW) {
-                send_packet(obj, (uint8_t)0x80 | obj->msgnum, picked->desc, strlen(picked->desc));
+                send_packet(obj, (uint8_t)0x80 | obj->msgnum, picked->desc, required_size - 2 /*header*/);
                 picked->priority = (obj->msgnum == obj->isn_msg_received_msgnum) ? ISN_MSG_PRI_HIGHEST : ISN_MSG_PRI_LOW;
             }
     #ifdef TODO_CLARIFY_WITH_IDM
@@ -161,7 +171,7 @@ uint8_t isn_msg_resend_queries(isn_message_t *obj, uint32_t timeout) {
     uint8_t count = 0;
     if (obj->resend_timer < INT32_MAX) obj->resend_timer++;
     if (obj->resend_timer > timeout) {
-        /* Convert lock into a new pending message */        
+        /* Convert lock into a new pending message */
         if (obj->lock) {
             obj->isn_msg_table[obj->lock].priority = ISN_MGG_PRI_UPDATE_ARGS;
             obj->lock = 0;
@@ -203,15 +213,15 @@ static size_t isn_message_recv(isn_layer_t *drv, const void *src, size_t size, i
     uint8_t msgnum = buf[1] & 0x7F;
 
     if (*buf != ISN_PROTO_MSG) return 0;
-#if 0 // Code temporarily removed until loading specifications are 100% cleared
-#ifndef FASTLOAD_BUG
+
+#ifdef TODO_CLARIFY_WITH_IDM_FAST_LOADING
     if (msgnum == ISN_MSG_NUM_LAST) {    // speed up loading and mark all mesages to be send out
         for (int i=ISN_MSG_NUM_ID+1; i<(obj->isn_msg_table_size-1); i++) {
             isn_msg_post(obj, i, buf[1] & 0x80 ? ISN_MSG_PRI_DESCRIPTIONLOW : ISN_MSG_PRI_LOW);
         }
     }
 #endif
-#endif
+
     if (msgnum >= obj->isn_msg_table_size) { // IDM asks for the last possible, indicating it doesn't know the device, so discard input buf
         msgnum = obj->isn_msg_table_size - 1;
         data_size = 0;
@@ -220,8 +230,7 @@ static size_t isn_message_recv(isn_layer_t *drv, const void *src, size_t size, i
         obj->drv.stats.rx_dropped++;
         return 0;  // we cannot handle multiple receive buffer requests atm, nor wrong input sizes
     }
-
-    /* Discard data if another UPDATE ARGS for the same message is already in progress, 
+    /* Discard data if another UPDATE ARGS for the same message is already in progress,
      * which eliminates inter-mediate receieve callbacks
      */
     if (obj->isn_msg_table[msgnum].priority != ISN_MGG_PRI_UPDATE_ARGS ) {
