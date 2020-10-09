@@ -27,14 +27,14 @@
 /* DEFINITIONS                                                          */
 /*----------------------------------------------------------------------*/
 
-#define ISN_CLOCK_SINCE(T)      ((int32_t)isn_clock_counter - (int32_t)(T))
+#define ISN_CLOCK_SINCE(T)      ((int32_t)*isn_clock_counter - (int32_t)(T))
 #define ISN_CLOCK_us(T)         (T)
 #define ISN_CLOCK_ms(T)         (1000*(T))
 #define ISN_CLOCK_s(T)          (1000000*(T))
 #define ISN_CLOCK_NOW           *isn_clock_counter
 
-/** A helper macro, works like while but limited with a timeout, \returns 0 on timeout and 1 on success */
-#define until(condition,timeout) {for(isn_clock_counter_t Ts=ISN_CLOCK_NOW; condition;) {if(ISN_CLOCK_SINCE(Ts) >= timeout) return 0;} return 1;}
+/** A helper macro, works like while(condition) but limited with a timeout */
+#define until(condition,timeout) for(isn_clock_counter_t Ts=ISN_CLOCK_NOW; (condition) && ISN_CLOCK_SINCE(Ts) < timeout;)
 
 typedef uint32_t isn_clock_counter_t;
 
