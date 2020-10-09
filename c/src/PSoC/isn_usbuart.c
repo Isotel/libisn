@@ -23,9 +23,13 @@
 
 #include <string.h>
 #include "project.h"
+#include "config.h"
+#include "isn_clock.h"
 #include "PSoC/isn_usbuart.h"
 
 /**\{ */
+
+#define USBUART_TIMEOUT    ISN_CLOCK_ms(100)
 
 /**
  * Allocate buffer if buf is given, or just query for availability if buf is NULL
@@ -57,7 +61,7 @@ static void isn_usbuart_free(isn_layer_t *drv, const void *ptr) {
 static int isn_usbuart_send(isn_layer_t *drv, void *dest, size_t size) {
     assert(size <= TXBUF_SIZE);
     if (size) {
-        while( !USBUART_CDCIsReady() ); // todo: timeout assert
+        ASSERT_TIMEOUT( !USBUART_CDCIsReady(), USBUART_TIMEOUT );
         USBUART_PutData(dest, size);
         obj->drv.stats.tx_counter += size;
         obj->drv.stats.tx_packets++;

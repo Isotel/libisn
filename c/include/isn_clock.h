@@ -33,6 +33,9 @@
 #define ISN_CLOCK_s(T)          (1000000*(T))
 #define ISN_CLOCK_NOW           *isn_clock_counter
 
+/** A helper macro, works like while but limited with a timeout, \returns 0 on timeout and 1 on success */
+#define until(condition,timeout) {for(isn_clock_counter_t Ts=ISN_CLOCK_NOW; condition;) {if(ISN_CLOCK_SINCE(Ts) >= timeout) return 0;} return 1;}
+
 typedef uint32_t isn_clock_counter_t;
 
 extern volatile const isn_clock_counter_t *isn_clock_counter;    ///< Pointer to 32-bit free running clock counter

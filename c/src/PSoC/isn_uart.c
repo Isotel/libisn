@@ -24,9 +24,13 @@
 
 #include <string.h>
 #include "project.h"
+#include "config.h"
+#include "isn_clock.h"
 #include "PSoC/isn_uart.h"
 
 /**\{ */
+
+#define UART_TIMEOUT        ISN_CLOCK_ms(100)
 
 #if(CYDEV_CHIP_FAMILY_USED == CYDEV_CHIP_FAMILY_PSOC4)
     #define UART_GetNumInTxFifo()       UART_SpiUartGetTxBufferSize()
@@ -97,7 +101,7 @@ static int isn_uart_send(isn_layer_t *drv, void *dest, size_t size) {
     isn_uart_t *obj = (isn_uart_t *)drv;
     assert(size <= UART_TXBUF_SIZE);
     if (size) {
-        while( !UART_TX_is_ready(size) );   // todo: timeout assert
+        ASSERT_TIMEOUT( !UART_TX_is_ready(size), UART_TIMEOUT );
         UART_PutArray(dest, size);
         obj->drv.stats.tx_counter += size;
         obj->drv.stats.tx_packets++;
