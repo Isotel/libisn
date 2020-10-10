@@ -61,7 +61,7 @@ static void isn_usbuart_free(isn_layer_t *drv, const void *ptr) {
 static int isn_usbuart_send(isn_layer_t *drv, void *dest, size_t size) {
     assert(size <= TXBUF_SIZE);
     if (size) {
-        ASSERT_TIMEOUT( !USBUART_CDCIsReady(), USBUART_TIMEOUT );
+        ASSERT_UNTIL( USBUART_CDCIsReady(), USBUART_TIMEOUT );
         USBUART_PutData(dest, size);
         obj->drv.stats.tx_counter += size;
         obj->drv.stats.tx_packets++;

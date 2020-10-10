@@ -34,7 +34,7 @@
 #define ISN_CLOCK_NOW           *isn_clock_counter
 
 /** A helper macro, works like while(condition) but limited with a timeout */
-#define until(condition,timeout) for(isn_clock_counter_t Ts=ISN_CLOCK_NOW; (condition) && ISN_CLOCK_SINCE(Ts) < timeout;)
+#define until(condition,timeout) for(isn_clock_counter_t Ts=ISN_CLOCK_NOW; !(condition) && ISN_CLOCK_SINCE(Ts) < timeout;)
 
 typedef uint32_t isn_clock_counter_t;
 
