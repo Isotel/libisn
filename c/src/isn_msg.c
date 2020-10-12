@@ -217,7 +217,7 @@ static size_t isn_message_recv(isn_layer_t *drv, const void *src, size_t size, i
 #ifdef TODO_CLARIFY_WITH_IDM_FAST_LOADING
     if (msgnum == ISN_MSG_NUM_LAST) {    // speed up loading and mark all mesages to be send out
         for (int i=ISN_MSG_NUM_ID+1; i<(obj->isn_msg_table_size-1); i++) {
-            isn_msg_post(obj, i, buf[1] & 0x80 ? ISN_MSG_PRI_DESCRIPTIONLOW : ISN_MSG_PRI_LOW);
+            isn_msg_post(obj, i, (buf[1] & 0x80) ? ISN_MSG_PRI_DESCRIPTIONLOW : ISN_MSG_PRI_LOW);
         }
     }
 #endif
@@ -240,7 +240,7 @@ static size_t isn_message_recv(isn_layer_t *drv, const void *src, size_t size, i
             obj->isn_msg_received_data = obj->message_buffer;
             obj->isn_msg_received_msgnum = msgnum;
         }
-        isn_msg_post(obj, msgnum, (uint8_t) (buf[1] & 0x80 ? ISN_MSG_PRI_DESCRIPTION : ISN_MSG_PRI_HIGHEST));
+        isn_msg_post(obj, msgnum, (uint8_t) ((buf[1] & 0x80) ? ISN_MSG_PRI_DESCRIPTION : ISN_MSG_PRI_HIGHEST));
     }
     else if (msgnum == obj->lock) {
         obj->lock = 0;

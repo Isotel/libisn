@@ -91,7 +91,7 @@ static void free_send_buf(isn_layer_t* drv, const void* buf) {
 
 static int send_buf(isn_layer_t* drv, void* buf, size_t sz) {
     isn_serial_driver_t* const driver = (isn_serial_driver_t*) drv;
-    LOG_TRACE(isn_logger_level, "sending %zd bytes [%s]", sz, hex_dump(buf, sz));
+    LOG_TRACE(isn_logger_level, "sending %zu bytes [%s]", sz, hex_dump(buf, sz));
 #ifdef _WIN32
     DWORD bytes_written;
     if (WriteFile(driver->port_handle, buf, sz, &bytes_written, NULL) == 0) {
@@ -99,7 +99,7 @@ static int send_buf(isn_layer_t* drv, void* buf, size_t sz) {
         return -1;
     }
     if (bytes_written != sz) {
-        LOG_ERROR(isn_logger_level, "wrote only %ld bytes of %lld bytes", bytes_written, sz)
+        LOG_ERROR(isn_logger_level, "wrote only %ld bytes of %zu bytes", bytes_written, sz)
         return -1;
     }
 #else
@@ -341,7 +341,7 @@ int isn_serial_driver_poll(isn_serial_driver_t* driver, time_ms_t timeout) {
     }
 #endif
     if (bytes_read) {
-        LOG_TRACE(isn_logger_level, "read %lu bytes [%s]", (long) bytes_read, hex_dump((unsigned char*) buf, bytes_read))
+        LOG_TRACE(isn_logger_level, "read %ld bytes [%s]", (long)bytes_read, hex_dump((unsigned char*)buf, bytes_read))
         driver->child_driver->recv(driver->child_driver, buf, bytes_read, &driver->drv);
     }
 

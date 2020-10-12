@@ -220,10 +220,9 @@ static int send_buf(isn_layer_t* drv, void* buf, size_t sz) {
 
 static int isn_udp_driver_init(isn_udp_driver_t* driver, uint16_t port,
                                isn_layer_t* child, int broadcast) {
-    if (wsa_startup() != 0) {
-        return -EINVAL;
-    }
-
+#ifdef _WIN32
+    if (wsa_startup() != 0) return -EINVAL;
+#endif
     LOG_INFO(isn_logger_level,
              "starting udp driver, port: %u, maximum clients: %zu", port,
              sizeof(driver->clients.clients) / sizeof(driver->clients.clients[0]))
