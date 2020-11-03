@@ -29,7 +29,7 @@ typedef uint32_t isn_reactor_time_t;
 typedef void* (* isn_reactor_tasklet_t)(const void* arg);
 typedef void* (* isn_reactor_caller_t)(isn_reactor_tasklet_t tasklet, const void* arg, const void* retval);
 
-extern const volatile const isn_reactor_time_t* _isn_reactor_timer;
+extern isn_reactor_time_t const volatile * _isn_reactor_timer;
 extern isn_reactor_time_t _isn_reactor_active_timestamp;
 
 typedef struct isn_tasklet_entry {

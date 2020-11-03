@@ -87,7 +87,7 @@
 /**\{ */
 
 isn_reactor_time_t _isn_reactor_active_timestamp;
-const volatile isn_reactor_time_t* _isn_reactor_timer;
+isn_reactor_time_t const volatile * _isn_reactor_timer;
 isn_reactor_time_t isn_reactor_timer_trigger;
 
 static isn_tasklet_entry_t *queue_table;
