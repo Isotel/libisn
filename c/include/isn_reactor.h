@@ -154,6 +154,6 @@ isn_reactor_time_t isn_reactor_run(void);
 int isn_reactor_selftest();
 
 /** Initialize reactor and provide queue buffer */
-void isn_reactor_init(isn_tasklet_entry_t *tasklet_queue, size_t queue_size, const volatile const isn_reactor_time_t* timer);
+void isn_reactor_init(isn_tasklet_entry_t *tasklet_queue, size_t queue_size, const volatile isn_reactor_time_t* timer);
 
 #endif

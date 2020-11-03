@@ -312,7 +312,7 @@ int isn_reactor_selftest() {
     return 0;
 }
 
-void isn_reactor_init(isn_tasklet_entry_t *tasklet_queue, size_t queue_size, const volatile const isn_reactor_time_t* timer) {
+void isn_reactor_init(isn_tasklet_entry_t *tasklet_queue, size_t queue_size, const volatile isn_reactor_time_t* timer) {
     _isn_reactor_timer = timer;
     queue_table = tasklet_queue;
     queue_len   = queue_size;
