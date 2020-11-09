@@ -53,6 +53,9 @@ void isn_clock_init();
 /** Starts Clock and does not use any interrupt */
 void isn_clock_start();
 
+/** Wait for interrupt until some time */
+void isn_clock_wfi(isn_clock_counter_t until_time);
+
 /** \} */
 
 #endif
