@@ -43,24 +43,24 @@ void isn_clock_start() {
     CLOCK_Start();
 }
 
-void isn_clock_wfi(isn_clock_counter_t until_time) {
-#ifdef ClockInt__INTC_ASSIGNED
+int isn_clock_wfi(isn_clock_counter_t until_time) {
     uint32_t state = CyEnterCriticalSection();
-    if ( ISN_CLOCK_SINCE(until_time) < -ISN_CLOCK_us(5) ) {   // for less than some time it makes no sense to enter sleep
+    int pending = 0;
+    if ( ISN_CLOCK_SINCE(until_time) < -ISN_CLOCK_us(5) ) {
+#ifdef ClockInt__INTC_ASSIGNED
         CLOCK_SetCompare0( until_time );
-        if(CY_SYSPM_SUCCESS != Cy_SysPm_CpuEnterSleep(CY_SYSPM_WAIT_FOR_INTERRUPT)) {
-            /* The CPU Sleep mode was not entered because a registered
-            *  Sleep "check ready" callback returned a "not success" status
-            */
-        }
-        else {
-            /* If the program has reached here, the CPU has just woken up from the CPU Sleep mode */
-        }
-    }
-    Cy_SysLib_ExitCriticalSection(state);
 #else
 #pragma message("Clock interrupt not enabled: isn_clock_wfi() works but without timeout")
 #endif
+        if(CY_SYSPM_SUCCESS != Cy_SysPm_CpuEnterSleep(CY_SYSPM_WAIT_FOR_INTERRUPT)) {
+            pending = -1;
+        }
+        else {
+            pending = 1;
+        }
+    }
+    Cy_SysLib_ExitCriticalSection(state);
+    return pending;
 }
 
 /** \} \endcond */

@@ -53,8 +53,12 @@ void isn_clock_init();
 /** Starts Clock and does not use any interrupt */
 void isn_clock_start();
 
-/** Wait for interrupt until some time */
-void isn_clock_wfi(isn_clock_counter_t until_time);
+/** Wait for interrupt until some time
+ *  \return -1 if The CPU Sleep mode was not entered because a registered sleep "check ready" callback returned a "not success" status
+ *  \return 0 if due to less than some time it made no sense to enter the sleep
+ *  \return 1 the CPU has just woken up from the CPU Sleep mode
+ */
+int isn_clock_wfi(isn_clock_counter_t until_time);
 
 /** \} */
 
