@@ -38,6 +38,9 @@ static int send_packet(isn_message_t *obj, uint8_t msgflags, const void* data, i
         obj->drv.stats.tx_counter+=size-2;
         return size;
     }
+    else if (dest) {
+        obj->parent_driver->free(obj->parent_driver, dest);
+    }
     obj->drv.stats.tx_dropped++;
     obj->parent_driver->free(obj->parent_driver, dest);   // we're ok to free NULL to simplify code
     return 0;

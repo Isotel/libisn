@@ -71,7 +71,7 @@ const void * userstream_recv(isn_layer_t *drv, const void *src, size_t size, isn
         memcpy(obuf, src, size);
         caller->send(caller, obuf, size);
     }
-    else {
+    else if (obuf) {
         caller->free(caller, obuf);
     }
     return src;
@@ -85,7 +85,7 @@ void userstream_generate() {
             memcpy(obuf, "User\n", 5);
             isn_user.drv.send(&isn_user, obuf, 5);
         }
-        else {
+        else if (obuf) {
             isn_user.drv.free(&isn_user, obuf);
         }
     }
@@ -105,7 +105,7 @@ const void * terminal_recv(isn_layer_t *drv, const void *src, size_t size, isn_d
             memcpy(obuf, "ping", 4);
             caller->send(caller, obuf, 4);
         }
-        else {
+        else if (obuf) {
             caller->free(caller, obuf);
         }
     }
@@ -114,7 +114,7 @@ const void * terminal_recv(isn_layer_t *drv, const void *src, size_t size, isn_d
             memcpy(obuf, buf, size);
             caller->send(caller, obuf, size);
         }
-        else {
+        else if (obuf) {
             caller->free(caller, obuf);
         }
     }

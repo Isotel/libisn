@@ -32,8 +32,10 @@ static size_t isn_redirect_recv(isn_layer_t *drv, const void *src, size_t size, 
         obj->drv.stats.tx_counter += bs;
         return bs;
     }
+    else if (obuf) {
+        target->free(target, obuf);
+    }
     obj->drv.stats.tx_retries++;
-    target->free(target, obuf);
     return 0;
 }
 

@@ -64,7 +64,7 @@ const void * terminal_recv(isn_layer_t *drv, const void *src, size_t size, isn_d
             memcpy(obuf, "ping", 4);
             caller->send(caller, obuf, 4);
         }
-        else {
+        else if (obuf)  {
             caller->free(caller, obuf);
         }
 #endif
@@ -74,7 +74,7 @@ const void * terminal_recv(isn_layer_t *drv, const void *src, size_t size, isn_d
             memcpy(obuf, buf, size);
             caller->send(caller, obuf, size);
         }
-        else {
+        else if (obuf)  {
             caller->free(caller, obuf);
         }
     }
