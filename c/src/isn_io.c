@@ -18,18 +18,24 @@
 
 #include <string.h>
 #include "isn_io.h"
+#include <project.h>
 
 /**\{ */
 
-int isn_write(isn_layer_t *layer, const void *src, size_t size) {
-    void *buf;
-    isn_driver_t *drv = (isn_driver_t *)layer;
-    if (drv->getsendbuf(drv, &buf, size, drv) == size) {
-        memcpy(buf, src, size);
-        return drv->send(drv, buf, size);
+int isn_write_atleast(isn_layer_t *layer, const void *src, size_t size, size_t minsize) {
+    if (size) {
+        void *buf;
+        isn_driver_t *drv = (isn_driver_t *)layer;
+        int avail = drv->getsendbuf(drv, &buf, size, drv);
+        if (buf) {
+            if (avail >= (int)minsize) {
+                memcpy(buf, src, avail);
+                return drv->send(drv, buf, avail);
+            }
+            drv->free(drv, buf);
+        }
     }
-    drv->free(drv, buf);
-    return -1;
+    return 0;
 }
 
 /** \} \endcond */

@@ -33,14 +33,26 @@ extern "C"
 /* Public functions                                                     */
 /*----------------------------------------------------------------------*/
 
+/** Write to any layer however define the lower, required size, limit of data that is to be sent
+ *
+ * \param layer with capability of transmission
+ * \param src data
+ * \param size, 0 is allowed and function will just return with 0
+ * \param minsize to be written
+ * \returns result from the layer send() method, or 0 on insufficient buffer availabilty
+ */
+int isn_write_atleast(isn_layer_t *layer, const void *src, size_t size, size_t minsize);
+
 /** Write to any layer
  *
  * \param layer with capability of transmission
- * \param src daa
- * \param size
- * \returns result from the layer send() method, or -1 on insufficient buffer availabilty
+ * \param src data
+ * \param size, 0 is allowed and function will just return with 0
+ * \returns result from the layer send() method, or 0 on insufficient buffer availabilty
  */
-int isn_write(isn_layer_t *layer, const void *src, size_t size);
+static inline int isn_write(isn_layer_t *layer, const void *src, size_t size) {
+    return isn_write_atleast(layer, src, size, size);
+}
 
 #ifdef __cplusplus
 }

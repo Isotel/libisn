@@ -25,7 +25,7 @@ static size_t isn_redirect_recv(isn_layer_t *drv, const void *src, size_t size, 
     isn_redirect_t *obj = (isn_redirect_t *)drv;
     isn_driver_t *target = (obj->target) ? obj->target : (isn_driver_t *)caller;
     void *obuf = NULL;
-    int bs = target->getsendbuf(target, &obuf, size, drv);
+    int bs = target->getsendbuf(target, &obuf, size, caller);
     if ( bs == size || (bs > 0 && obj->en_fragment) ) {
         memcpy(obuf, src, bs);
         target->send(target, obuf, bs);

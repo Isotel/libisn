@@ -183,7 +183,7 @@ void isn_usbfs_assign_inbuf(uint8_t no, isn_layer_t *reserve_for_layer) {
         for (; no<7; no++) inep_reservation[no] = reserve_for_layer;
         return;
     }
-    if (no < 1) no = 1; else if (no > 7) no = 7;
+    if (no > 7) no = 7;
     inep_reservation[no-1] = reserve_for_layer;
 }
 
