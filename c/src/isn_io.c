@@ -18,7 +18,6 @@
 
 #include <string.h>
 #include "isn_io.h"
-#include <project.h>
 
 /**\{ */
 
