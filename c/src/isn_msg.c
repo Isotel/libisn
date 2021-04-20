@@ -202,6 +202,18 @@ uint8_t isn_msg_resend_queries(isn_message_t *obj, uint32_t timeout) {
     return count;
 }
 
+int isn_msg_discardpending(isn_message_t *obj) {
+    uint8_t count = 0;
+    for (uint8_t msgnum = 0; msgnum < obj->isn_msg_table_size; msgnum++) {
+        if (obj->isn_msg_table[msgnum].priority > ISN_MSG_PRI_CLEAR) {
+            obj->isn_msg_table[msgnum].priority = ISN_MSG_PRI_CLEAR;
+            count++;
+        }
+    }
+    obj->lock = 0;
+    return count;
+}
+
 /**
  * Receive a message from low-level driver
  *

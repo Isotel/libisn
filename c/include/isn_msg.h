@@ -379,6 +379,12 @@ static inline uint8_t isn_msg_sendby(isn_message_t *obj, isn_events_handler_t hn
 uint8_t isn_msg_resend_queries(isn_message_t *obj, uint32_t timeout);
 
 /**
+ * Discard just all pending messages, includes pending queries, updates, etc.
+ * \returns number of discarded pending messages
+ */
+int isn_msg_discardpending(isn_message_t *obj);
+
+/**
  * Callback may call this function to confirm that input relates
  * to a callback argument from message layer.
  *
