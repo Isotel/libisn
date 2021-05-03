@@ -252,7 +252,7 @@ typedef struct {
     uint32_t tx_counter;    ///< number of bytes of user payload
     uint32_t tx_dropped;    ///< Couldn't be sent
     uint32_t tx_retries;    ///< Number of retries
-} __attribute__((packed)) isn_driver_stats_t;
+} __attribute__((packed)) __attribute__((aligned(4))) isn_driver_stats_t;
 
 #define ISN_DRIVER_STATS_DESC(cb) \
     {0, sizeof(isn_driver_stats_t), cb, "RX rx{{:packets}={%lu}{:bytes}={%lu}{:errors}={%lu}"}, \
