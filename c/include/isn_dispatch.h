@@ -1,9 +1,11 @@
 /** \file
  *  \brief ISN Protocol Receiver Dispatcher
- *  \author Uros Platise <uros@isotel.eu>
+ *  \author Uros Platise <uros@isotel.org>
  *  \see isn_dispatch.c
- * 
- * \defgroup GR_ISN_Dispatch ISN Dispatcher
+ */
+/**
+ * \ingroup GR_ISN
+ * \defgroup GR_ISN_Dispatch Protocol Dispatcher
  * 
  * # Scope
  * 
@@ -24,7 +26,7 @@
  * 
  * Dispatcher can only work properly after data is properly formatted, means, that
  * the first byte in the packet provides the next protocol ID. 
- * Typically it is a child of \ref GR_ISN_Frame, \ref GR_ISN_USBFS, UDP Layer and others.
+ * Typically it is a child of \ref GR_ISN_Frame, \ref GR_ISN_PSoC_USBFS, UDP Layer and others.
  * 
  * An example of usage, dispatching information among:
  * 
@@ -49,7 +51,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  * 
- * (c) Copyright 2019, Isotel, http://isotel.eu
+ * (c) Copyright 2019, Isotel, http://isotel.org
  */
 
 #ifndef __ISN_DISPATCH_H__
@@ -96,6 +98,7 @@ isn_dispatch_t;
 
 /** Dispatcher
  * 
+ * \param obj
  * \param childs binding layers
  */
 void isn_dispatch_init(isn_dispatch_t *obj, isn_bindings_t* childs);

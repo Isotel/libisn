@@ -1,7 +1,7 @@
 /** \file
  *  \brief ISN Main Library without Platform Specific PHY Drivers
- *  \author Uros Platise <uros@isotel.eu>
- *  \see https://www.isotel.eu/isn
+ *  \author Uros Platise <uros@isotel.org>
+ *  \see https://www.isotel.org/isn
  */
 
 #ifndef __ISN_H__
@@ -16,5 +16,6 @@
 #include "isn_msg.h"
 #include "isn_io.h"
 #include "isn_reactor.h"
+#include "isn_clock.h"
 
 #endif

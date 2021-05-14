@@ -1,8 +1,10 @@
 /** \file
  *  \author Nelson Gaston Sanchez <gaston.sanchez@dewesoft.com>
  *  \see isn_uart.c
- * 
- * \defgroup GR_ISN_PSoC_UART ISN Driver for PSoC UART
+ */
+/**
+ * \ingroup GR_ISN_TM4C
+ * \defgroup GR_ISN_TM4C_UART TM4C UART Driver
  * 
  * # Scope
  * 
@@ -80,10 +82,12 @@ size_t isn_uart_poll(isn_uart_t *obj);
 
 /** Initialize
  * 
+ * \param obj
  * \param child use the next layer, like isn_frame
+ * \param port TM4C UART number
  */
 void isn_uart_init(isn_uart_t *obj, isn_layer_t* child, uint8_t port);
 unsigned char UART_PutArray(uint8_t* dest,uint8_t size,uint32_t base, uint32_t uDMAbase);
-unsigned char UART_SpiUartReadRxData(void );
+unsigned char UART_SpiUartReadRxData(void);
 
 #endif

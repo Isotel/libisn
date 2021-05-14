@@ -1,9 +1,11 @@
 /** \file
  *  \brief ISN Protocol Receiver Duplicator
- *  \author Uros Platise <uros@isotel.eu>
+ *  \author Uros Platise <uros@isotel.org>
  *  \see isn_dup.c
- * 
- * \defgroup GR_ISN_Dup ISN Duplicate Receiver Stream
+ */
+/**
+ * \ingroup GR_ISN
+ * \defgroup GR_ISN_Dup Duplicates Receiving Stream
  * 
  * # Scope
  * 
@@ -29,7 +31,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  * 
- * (c) Copyright 2020, Isotel, http://isotel.eu
+ * (c) Copyright 2020, Isotel, http://isotel.org
  */
 
 #ifndef __ISN_DISPATCH_H__
@@ -63,7 +65,9 @@ isn_dup_t;
 
 /** Dispatcher
  * 
- * \param childs
+ * \param obj
+ * \param child1 the first receiving stream
+ * \param child2 and the duplicate receiving stream
  */
 void isn_dup_init(isn_dup_t *obj, isn_layer_t *child1, isn_layer_t *child2);
 

@@ -1,9 +1,9 @@
 /** \file
  *  \brief ISN USBFS Bulk USB Driver for PSoC4 and PSoC5
- *  \author Uros Platise <uros@isotel.eu>
+ *  \author Uros Platise <uros@isotel.org>
  *  \see isn_usbfs.h
  * 
- * \defgroup GR_ISN_PSoC_USBFS ISN Driver for PSoC USBFS
+ * \defgroup GR_ISN_PSoC_USBFS PSoC USBFS Driver
  * 
  * # Scope
  * 
@@ -19,7 +19,7 @@
  * See \ref GR_ISN_Dispatch for example.
  */
 /*
- * (c) Copyright 2019, Isotel, http://isotel.eu
+ * (c) Copyright 2019, Isotel, http://isotel.org
  */
 
 #ifndef __ISN_USBFS_H__
@@ -41,8 +41,6 @@ typedef struct {
     int buf_locked;
     int next_send_ep;
     size_t rx_size;
-    size_t rx_counter;
-    size_t rx_retry;
 }
 isn_usbfs_t;
 
@@ -61,6 +59,7 @@ size_t isn_usbfs_poll(isn_usbfs_t *obj);
  * the device to the PC). To control the number of buffers use the isn_usbfs_set_maxinbufs()
  * or allow calling layers to use certain buffers only with the isn_usbfs_assign_inbuf()
  * 
+ * \param obj
  * \param mode USBFS_3V_OPERATION, USBFS_5V_OPERATION, USBFS_DWR_POWER_OPERATION
  * \param child use the next layer, like isn_frame
  */

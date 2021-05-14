@@ -1,6 +1,6 @@
 /** \file
  *  \brief Example of UDP Server
- *  \author Uros Platise <uros@isotel.eu>
+ *  \author Uros Platise <uros@isotel.org>
  */
 
 #include <errno.h>
@@ -59,7 +59,7 @@ static void* counter_cb(const void* data) {
 }
 
 // Triggers every second by IDM unless this device is sending other data
-size_t ping_recv(isn_layer_t* drv, const void* src, size_t size, isn_driver_t* caller) {
+size_t ping_recv(isn_layer_t* drv, const void* src, size_t size, isn_layer_t* caller) {
     isn_msg_sendby(&isn_message, counter_cb, ISN_MSG_PRI_NORMAL);
     return size;
 }
@@ -72,7 +72,7 @@ static isn_msg_table_t isn_msg_table[] = {
 
 static isn_bindings_t isn_bindings[] = {
     { ISN_PROTO_MSG,  &isn_message },
-    { ISN_PROTO_PING, &(isn_receiver_t) { ping_recv }},
+    { ISN_PROTO_PING, &(isn_receiver_t){ ping_recv }},
     { ISN_PROTO_LISTEND, NULL }
 };
 
@@ -108,7 +108,7 @@ int main(int argc, char* argv[]) {
     isn_msg_init(&isn_message, isn_msg_table, ARRAY_SIZE(isn_msg_table), isn_udp_driver);
 
     // add client and send at least one, the first message, to establish connection
-    // Number of other clients may in addition connect to this udp server to the given port    
+    // Number of other clients may in addition connect to this udp server to the given port
     //isn_udp_driver_addclient(isn_udp_driver, "255.255.255.255", "33005"); // add this line the device will connect to all IDMs in network
     isn_udp_driver_addclient(isn_udp_driver, "localhost", "33005");         // or add this line to connect to specific only
     isn_msg_sendby(&isn_message, counter_cb, ISN_MSG_PRI_NORMAL);

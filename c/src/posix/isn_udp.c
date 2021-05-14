@@ -1,9 +1,10 @@
 /** \file
  *  \brief ISN UDP Driver Implementation
- *  \author Stanislav <stanislav@isotel.eu>,
- *          Uros Platise <uros@isotel.eu>
+ *          
  *  \see isn_udp_driver.h
- *
+ */
+/**
+ * \ingroup GR_ISN_POSIX
  * \cond Implementation
  * \addtogroup GR_ISN_UDP
  */
@@ -12,7 +13,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
- * (c) Copyright 2019, Isotel, http://isotel.eu
+ * (c) Copyright 2019, Isotel, http://isotel.org
  */
 
 #include <isn.h>
@@ -187,7 +188,7 @@ static int wsa_startup() {
 #endif
 }
 
-static int get_send_buf(isn_layer_t* drv, void** buf, size_t size, isn_layer_t* caller) {
+static int get_send_buf(isn_layer_t* drv, void** buf, size_t size, const isn_layer_t* caller) {
     isn_udp_driver_t* const driver = (isn_udp_driver_t*) drv;
 
     if (!driver->buf_locked) {
@@ -219,10 +220,9 @@ static int send_buf(isn_layer_t* drv, void* buf, size_t sz) {
 
 static int isn_udp_driver_init(isn_udp_driver_t* driver, uint16_t port,
                                isn_layer_t* child, int broadcast) {
-    if (wsa_startup() != 0) {
-        return -EINVAL;
-    }
-
+#ifdef _WIN32
+    if (wsa_startup() != 0) return -EINVAL;
+#endif
     LOG_INFO(isn_logger_level,
              "starting udp driver, port: %u, maximum clients: %zu", port,
              sizeof(driver->clients.clients) / sizeof(driver->clients.clients[0]))

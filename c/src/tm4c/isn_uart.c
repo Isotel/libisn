@@ -1,22 +1,25 @@
 /** \file
  *  \author Nelson Gaston Sanchez <gaston.sanchez@dewesoft.com>
  *  \see isn_uart.h
- * 
- * \addtogroup GR_ISN_PSoC_UART
- * 
+ */
+/**
+ * \ingroup GR_ISN_TM4C
+ * \addtogroup GR_ISN_TM4C_UART
+ *
  * # Tested
- * 
+ *
  *  - Families: TM4C
- * 
+ *
  * \cond Implementation
  */
 
 #include "isn_uart.h"
 
-extern isn_uart_t     isn_uart_host,isn_uart_debug;
+extern isn_uart_t isn_uart_host, isn_uart_debug;
 static isn_uart_t *objs[2];
 
 #define UART_uDMA
+
 /**\{ */
 
 unsigned char UART_PutArray(uint8_t* dest,uint8_t size,uint32_t base,uint32_t uDMAbase){
@@ -40,7 +43,7 @@ unsigned char UART_PutArray(uint8_t* dest,uint8_t size,uint32_t base,uint32_t uD
 
 /**
  * Allocate buffer if buf is given, or just query for availability if buf is NULL
- * 
+ *
  * \returns desired or limited (max) size in the case desired size is too big
  */
 static int isn_uart_getsendbuf(isn_layer_t *drv, void **dest, size_t size, const isn_layer_t *caller) {
@@ -82,8 +85,9 @@ size_t isn_uart_poll(isn_uart_t *obj) {
         if (size < obj->rx_size) {
             obj->rx_retry++;    // Packet could not be fully accepted, retry next time
             memmove(obj->rxbuf, &obj->rxbuf[size], obj->rx_size - size);
+            obj->rx_size -= size;
         }
-        obj->rx_size -= size;
+        else obj->rx_size = 0;  // handles case if recv() returns size higher than rx_size
         IntEnable(obj->intnum);
     }
     return size;
@@ -92,7 +96,6 @@ size_t isn_uart_poll(isn_uart_t *obj) {
 void UART0_Handler(void) {
     uint32_t status = UARTIntStatus(UART0_BASE,0);
     UARTIntClear(UART0_BASE,status);
-    HWREG(UART0_BASE + UART_O_DR) = '*';
     if (status & (UART_INT_FE|UART_INT_PE|UART_INT_BE|UART_INT_OE)) {
         UARTRxErrorClear(UART0_BASE);
         while (UARTCharsAvail(UART0_BASE)) {
@@ -183,7 +186,6 @@ void isn_uart_init(isn_uart_t *obj, isn_layer_t* child, uint8_t port) {
     uDMAChannelDisable(obj->DMAtx);
     uDMAChannelAttributeDisable(obj->DMAtx, UDMA_ATTR_ALTSELECT | UDMA_ATTR_USEBURST | UDMA_ATTR_HIGH_PRIORITY | UDMA_ATTR_REQMASK);
     uDMAChannelControlSet(obj->DMAtx | UDMA_PRI_SELECT, UDMA_SIZE_8 | UDMA_SRC_INC_8 | UDMA_DST_INC_NONE | UDMA_ARB_4);
-
 }
 
 /** \} \endcond */

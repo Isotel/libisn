@@ -1,21 +1,38 @@
 /** \file
  *  \brief ISN Protocol Abstract Class
- *  \author Uros Platise <uros@isotel.eu>
- *  \see https://www.isotel.eu/isn
- *
- * \defgroup GR_ISN ISN Driver Abstract class
- *
+ *  \author Uros Platise <uros@isotel.org>
+ *  \see https://www.isotel.org/isn
+ *  \defgroup GR_ISN Isotel Sensor Networks
+ * 
  * # Scope
  *
- * The [ISOTEL Sensor Network Protocol](https://www.isotel.eu/isn/overview.html)
+ * The [ISOTEL Sensor Network Protocol](https://www.isotel.org/isn/overview.html)
  * defines a set of simple re-usable protocol objects that can be used as stand-alone
  * or combined, on-demand, into a complex protocol structures.
  *
  * ISN Abtract Driver class defines the architecture of the
- * [ISN Protocol Layer Stack implementation in C](https://www.isotel.eu/isn/),
+ * [ISN Protocol Layer Stack implementation in C](https://www.isotel.org/isn/),
  * imitating object-like oriented programming. In this approach
  * individual layers may be arbitrarily stacked, chained, one with another to provide
  * desired protocol complexity. Structures can also be created on demand, dynamically.
+ *
+ * To get acquainted with the concepts continue reading the \ref GR_ISN_Driver.
+ */
+/**
+ * \ingroup GR_ISN
+ * \defgroup GR_ISN_PSoC Platform Cypress PSoC
+ */
+/**
+ * \ingroup GR_ISN
+ * \defgroup GR_ISN_TM4C Platform Texas Instruments TM4C
+ */
+/**
+ * \ingroup GR_ISN
+ * \defgroup GR_ISN_POSIX Platform POSIX
+ */
+/**
+ * \ingroup GR_ISN
+ * \defgroup GR_ISN_Driver Driver Abstract class
  *
  * # Concept
  *
@@ -181,7 +198,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
- * (c) Copyright 2019, Isotel, http://isotel.eu
+ * (c) Copyright 2019, Isotel, http://isotel.org
  */
 
 #ifndef __ISN_DEF_H__
@@ -222,7 +239,28 @@ extern "C" {
 
 #define ISN_PROTO_PING      0x00
 
-/** C-like Weak Abstract class of isn_layer_t */
+/**
+ * Driver Statistics
+ */
+typedef struct {
+    uint32_t rx_packets;    ///< number of packets or frames received
+    uint32_t rx_counter;    ///< number of bytes of user payload
+    uint32_t rx_errors;     ///< Received with errors
+    uint32_t rx_retries;    ///< number of retries to deliver the received message
+    uint32_t rx_dropped;    ///< Received successfully but couldn't be delivered in time
+    uint32_t tx_packets;    ///< number of packets or frames sent
+    uint32_t tx_counter;    ///< number of bytes of user payload
+    uint32_t tx_dropped;    ///< Couldn't be sent
+    uint32_t tx_retries;    ///< Number of retries
+} __attribute__((packed)) isn_driver_stats_t;
+
+#define ISN_DRIVER_STATS_DESC(cb) \
+    {0, sizeof(isn_driver_stats_t), cb, "RX rx{{:packets}={%lu}{:bytes}={%lu}{:errors}={%lu}"}, \
+    {0, 0,                        NULL, "+{:retries}={%lu}{:dropped}={%lu}}\nTX tx{{:packets}={%lu}"}, \
+    {0, 0,                        NULL, "+{:bytes}={%lu}{:dropped}={%lu}{:retries}={%lu}}\n" }
+                                      //"----+----1----+----2----+----3----+----4----+----5----+----6-"
+
+/** C-like Weak Abstract class of isn_drives_t */
 typedef void isn_layer_t;
 
 /**
@@ -276,6 +314,9 @@ typedef struct isn_driver_s {
      * Free buffer provided by getsendbuf().
      */
     void (*free)(isn_layer_t *drv, const void *ptr);
+
+    /** Driver statistics */
+    isn_driver_stats_t stats;
 }
 isn_driver_t;
 

@@ -1,12 +1,12 @@
 /** \file
- *  \author Uros Platise <uros@isotel.eu>
+ *  \author Uros Platise <uros@isotel.org>
  */
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
- * (c) Copyright 2019, Isotel, http://isotel.eu
+ * (c) Copyright 2019, Isotel, http://isotel.org
  */
 
 #include "project.h"
@@ -25,30 +25,20 @@ isn_frame_t isn_frame;
 isn_usbfs_t isn_usbfs;
 isn_dispatch_t isn_dispatch;
 
+int send_data = 0;
+
 /*----------------------------------------------------------*/
 /* Transparent User1 Layer sends arb data to telnet port    */
 /*----------------------------------------------------------*/
 
-void userstream_generate() {
-    void *obuf;
-    if (isn_user.drv.getsendbuf(&isn_user, &obuf, 5) == 5) {
-        memcpy(obuf, "User\n", 5);
-        isn_user.drv.send(&isn_user, obuf, 5);
-    }
-    else {
-        isn_user.drv.free(&isn_user, obuf);
-    }
+const uint8_t test_data[64] = "1234567890abcdefghijklmnoprstuvzxABCDEFGHIJKLMNOPRSTUZX@#$%^&*()";
+
+int userstream_generate() {
+    return isn_write_atleast(&isn_user, test_data, 62, 50);
 }
 
 void *userstream_send(const void *arg) {
-    void *obuf;
-    if (isn_user.drv.getsendbuf(&isn_user, &obuf, 5) == 5) {
-        memcpy(obuf, "Test\n", 5);
-        isn_user.drv.send(&isn_user, obuf, 5);
-    }
-    else {
-        isn_user.drv.free(&isn_user, obuf);
-    }
+    isn_write(&isn_user, "Test\n", 5);
     return NULL;
 }
 
@@ -59,38 +49,44 @@ void *userstream_send(const void *arg) {
 typedef struct {
     uint8_t blue;
     uint32_t cnt;
+    uint32_t remain;
 } __attribute__((packed)) led_t;
 
 static uint64_t serial = 0x1234567890ABCDEF;
-static led_t    led    = {1};
+static led_t    led    = {1, 10};
 
 void *serial_cb(const void *data) {
     return &serial;
 }
 
 void *led_cb(const void *data) {
-    static size_t idx = -1;
     if (data) {
         led = *((const led_t *)data);
-
-        // Prolong time of existing tasklet if it exists, otherwise create new one
-        if ( isn_reactor_change_timed(idx, userstream_send, NULL, ISN_REACTOR_DELAY(TIME_ms(3000))) == 0 ) {
-            idx = isn_reactor_queue_at(userstream_send, NULL, ISN_REACTOR_DELAY(TIME_ms(3000)));
-        }
     }
-    led.cnt = *SysCounter_COUNTER_LSB_PTR;
+    else {
+        led.blue ^= 1;
+    }
+    CTRL_LED_Write(~led.blue);
+    return &led;
+}
+
+void *led_cb2(const void *data) {
+    if (data) {
+        led = *((const led_t *)data);
+    }
+    //led.cnt = *SysCounter_COUNTER_LSB_PTR;
     return &led;
 }
 
 static isn_msg_table_t isn_msg_table[] = {
-    { 0, sizeof(uint64_t), serial_cb, "%T0{Example} V1.1 {#sno}={%<Lx}" },
-    { 0, sizeof(led_t),    led_cb,    "LED {:blue}={%hu:Off,On} {:cnt}={%lx}" },
+    { 0, sizeof(uint64_t), serial_cb, "%T0{Example} V1.2 {#sno}={%<Lx}" },
+    { 0, sizeof(led_t),    led_cb,    "LED {:blue}={%hu:Off,On} {:cnt}={%lu} {:rem}={%lu}" },
     ISN_MSG_DESC_END(0)
 };
 
 static isn_msg_table_t isn_msg_table2[] = {
-    { 0, sizeof(uint64_t), serial_cb, "%T0{Example2} V1.1 {#sno}={%<Lx}" },
-    { 0, sizeof(led_t),    led_cb,    "LED {:blue}={%hu:Off,On} {:cnt}={%lx}" },
+    { 0, sizeof(uint64_t), serial_cb, "%T0{Example2} V1.2 {#sno}={%<Lx}" },
+    { 0, sizeof(led_t),    led_cb2,    "LED {:blue}={%hu:Off,On} {:cnt}={%lu} {:rem}={%lu}" },
     ISN_MSG_DESC_END(0)
 };
 
@@ -98,19 +94,20 @@ static isn_msg_table_t isn_msg_table2[] = {
 /* Ping Handler from IDM                                    */
 /*----------------------------------------------------------*/
 
-const void * ping_recv(isn_layer_t *drv, const void *src, size_t size, isn_driver_t *caller) {
+size_t ping_recv(isn_layer_t *drv, const void *src, size_t size, isn_layer_t *caller) {
     assert(src);
     assert(size > 0);
 
     if ( *(uint8_t *)src == ISN_PROTO_PING) {
-        isn_msg_send(&isn_message, 1,1);
-        isn_msg_send(&isn_message2, 1,1);
+        isn_msg_send(&isn_message,  1, ISN_MSG_PRI_NORMAL);
+        isn_msg_send(&isn_message2, 1, ISN_MSG_PRI_NORMAL);
 
 #ifndef TELNET
-        userstream_generate();
+        led.remain = send_data;
+        send_data = led.cnt;
 #endif
     }
-    return src;
+    return size;
 }
 
 /*----------------------------------------------------------*/
@@ -129,7 +126,6 @@ static isn_bindings_t isn_bindings[] = {
 
 int main(void)
 {
-    PWM_LEDB_Start();
     SysCounter_Start();
 
     isn_tasklet_entry_t tasklets[8];
@@ -158,10 +154,19 @@ int main(void)
     isn_dispatch_init(&isn_dispatch, isn_bindings);
     CyGlobalIntEnable;
     isn_usbfs_init(&isn_usbfs, USBFS_DWR_POWER_OPERATION, &isn_dispatch);
+#if 0
+    isn_usbfs_assign_inbuf(0, &isn_user);
+    isn_usbfs_assign_inbuf(1, &isn_message);
+    isn_usbfs_assign_inbuf(2, &isn_message2);
+#endif
 
     while(1) {
         isn_usbfs_poll(&isn_usbfs);
         isn_reactor_run();
+        //if (send_data > 0) {            
+        //    send_data -= isn_write_atleast(&isn_user, test_data, send_data, 1);            
+        //}
+        send_data -= isn_write_atleast(&isn_user, test_data, send_data, 1);
         if ( !isn_msg_sched(&isn_message) && !isn_msg_sched(&isn_message2) ) {
             asm volatile("wfi");
         }

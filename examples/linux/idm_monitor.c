@@ -1,7 +1,5 @@
 /** \file
  *  \brief Example of Xilinx I2C Thermometers exposed to UDP
- *  \author Stanislav <stanislav@isotel.eu>, 
- *          Uros Platise <uros@isotel.eu>
  */
 
 #include <errno.h>

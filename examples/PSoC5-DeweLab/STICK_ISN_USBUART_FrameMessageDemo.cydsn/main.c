@@ -1,5 +1,5 @@
 /** \file
- *  \author Uros Platise <uros@isotel.eu>
+ *  \author Uros Platise <uros@isotel.org>
  *  \brief Simple Demo showing the use of Message Layer framed with Compact Frame over standard USB UART phy
  */
 /*
@@ -7,7 +7,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
- * (c) Copyright 2019, Isotel, http://isotel.eu
+ * (c) Copyright 2019, Isotel, http://isotel.org
  */
 
 #include "project.h"
@@ -64,7 +64,7 @@ const void * terminal_recv(isn_layer_t *drv, const void *src, size_t size, isn_d
             memcpy(obuf, "ping", 4);
             caller->send(caller, obuf, 4);
         }
-        else {
+        else if (obuf)  {
             caller->free(caller, obuf);
         }
 #endif
@@ -74,7 +74,7 @@ const void * terminal_recv(isn_layer_t *drv, const void *src, size_t size, isn_d
             memcpy(obuf, buf, size);
             caller->send(caller, obuf, size);
         }
-        else {
+        else if (obuf)  {
             caller->free(caller, obuf);
         }
     }

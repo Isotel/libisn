@@ -1,13 +1,15 @@
 /** \file
  *  \brief ISN Short and Compact (with CRC) Frame Protocol up to 64 B frames
- *  \author Uros Platise <uros@isotel.eu>
- *  \see https://www.isotel.eu/isn/frame.html
- * 
- * \defgroup GR_ISN_Frame ISN Driver for Frame Layer
+ *  \author Uros Platise <uros@isotel.org>
+ *  \see https://www.isotel.org/isn/frame.html
+ */
+/**
+ * \ingroup GR_ISN
+ * \defgroup GR_ISN_Frame Frame Layer Driver
  * 
  * # Scope
  * 
- * Implements Device side of the [ISN Frame Layer Protocol](https://www.isotel.eu/isn/frame.html)
+ * Implements Device side of the [ISN Frame Layer Protocol](https://www.isotel.org/isn/frame.html)
  * which encapsulated ordered data into a streams, and decapsulates data from the unordered streams.
  * It is a single byte overhead protocol and may pack from 1 to 64 bytes with optional 8-bit CRC
  * appended at the end.
@@ -97,7 +99,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  * 
- * (c) Copyright 2019, Isotel, http://isotel.eu
+ * (c) Copyright 2019, Isotel, http://isotel.org
  */
 
 #ifndef __ISN_FRAME_H__
@@ -130,7 +132,7 @@ typedef struct {
     isn_driver_t* other;
     isn_driver_t* parent;
     isn_frame_mode_t crc_enabled;
-    volatile uint32_t *sys_counter;
+    volatile const uint32_t *sys_counter;
     uint32_t frame_timeout;
 
     uint8_t state;
@@ -138,8 +140,6 @@ typedef struct {
     uint8_t recv_buf[ISN_FRAME_MAXSIZE];
     uint8_t recv_size;
     uint8_t recv_len;
-    uint32_t rx_frames;
-    uint32_t rx_errors;
     uint32_t last_ts;
 }
 isn_frame_t;
@@ -150,6 +150,7 @@ isn_frame_t;
 
 /** Short and Compact Frame Layer
  * 
+ * \param obj
  * \param mode selects short (without CRC) or compact (with CRC) which is typically used over noisy lines, as UART
  * \param child layer
  * \param other layer to which all the traffic that is outside the frames is redirected, like terminal I/O
@@ -158,7 +159,7 @@ isn_frame_t;
  * \param timeout defines period with reference to the counter after which reception is treated as invalid and to be discarded
  *        A 100 ms is a good choice.
  */
-void isn_frame_init(isn_frame_t *obj, isn_frame_mode_t mode, isn_layer_t* child, isn_layer_t* other, isn_layer_t* parent, volatile uint32_t *counter, uint32_t timeout);
+void isn_frame_init(isn_frame_t *obj, isn_frame_mode_t mode, isn_layer_t* child, isn_layer_t* other, isn_layer_t* parent, volatile const uint32_t *counter, uint32_t timeout);
 
 #ifdef __cplusplus
 }

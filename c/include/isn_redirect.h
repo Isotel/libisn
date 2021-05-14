@@ -1,9 +1,11 @@
 /** \file
  *  \brief ISN Redirect Driver
- *  \author Uros Platise <uros@isotel.eu>
+ *  \author Uros Platise <uros@isotel.org>
  *  \see isn_redirect.c
- * 
- * \defgroup GR_ISN_Redirect ISN Redirect Driver
+ */
+/**
+ * \ingroup GR_ISN
+ * \defgroup GR_ISN_Redirect Redirect Driver
  * 
  * # Scope
  * 
@@ -33,7 +35,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  * 
- * (c) Copyright 2019, Isotel, http://isotel.eu
+ * (c) Copyright 2019, Isotel, http://isotel.org
  */
 
 #ifndef __ISN_REDIRECT_H__
@@ -51,13 +53,10 @@ extern "C" {
 
 typedef struct {
     /* ISN Abstract Class Driver */
-    isn_receiver_t drv;
+    isn_driver_t drv;
 
     /* Private data */
     isn_driver_t* target;
-
-    size_t tx_counter;
-    size_t tx_retry;
     uint8_t en_fragment;    ///< Enable fragmention
 }
 isn_redirect_t;
@@ -68,6 +67,7 @@ isn_redirect_t;
 
 /** Redirect
  * 
+ * \param obj
  * \param target layer where data received should be copied to; if target is
  *    NULL it redirects back to the caller; see isn_loopback_init()
  */
@@ -77,6 +77,8 @@ void isn_redirect_init(isn_redirect_t *obj, isn_layer_t* target);
  * 
  * It is a special case of the redirect behaviour in which case data is 
  * returned back to the caller.
+ * 
+ * \param obj
  */
 inline static void isn_loopback_init(isn_redirect_t *obj) { isn_redirect_init(obj, NULL); }
 
@@ -87,6 +89,7 @@ inline static void isn_loopback_init(isn_redirect_t *obj) { isn_redirect_init(ob
  * there are no other packet oriented
  * protocols in the loop.
  * 
+ * \param obj
  * \param state set to non-zero value to enable fragmentation
  */
 inline static void isn_redirect_setfragmentation(isn_redirect_t *obj, uint8_t state) {obj->en_fragment = state;}

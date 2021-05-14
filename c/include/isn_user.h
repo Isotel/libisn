@@ -1,13 +1,15 @@
 /** \file
  *  \brief ISN User (Custom) Protocol Layer
- *  \author Uros Platise <uros@isotel.eu>
- *  \see https://www.isotel.eu/isn/user.html
- * 
- * \defgroup GR_ISN_User ISN Driver for User Layer
+ *  \author Uros Platise <uros@isotel.org>
+ *  \see https://www.isotel.org/isn/user.html
+ */
+/**
+ * \ingroup GR_ISN
+ * \defgroup GR_ISN_User User Layer Driver
  * 
  * # Scope
  * 
- * Implements Device side of the [ISN User Layer Protocol](https://www.isotel.eu/isn/user.html)
+ * Implements Device side of the [ISN User Layer Protocol](https://www.isotel.org/isn/user.html)
  * that allows the device to encapsulate custom streams to be exchanged with the external entity.
  * These streams may be represented on the external entity, as IDM host side, as telnet ports,
  * which allow seamless integration with 3rd party software.
@@ -46,7 +48,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  * 
- * (c) Copyright 2019, Isotel, http://isotel.eu
+ * (c) Copyright 2019, Isotel, http://isotel.org
  */
 
 #ifndef __ISN_USER_H__
@@ -71,8 +73,6 @@ typedef struct {
     isn_driver_t* child;
 
     uint8_t user_id;
-    size_t rx_counter;
-    size_t tx_counter;
 }
 isn_user_t;
 
@@ -82,6 +82,7 @@ isn_user_t;
 
 /** User Layer
  * 
+ * \param obj
  * \param child layer
  * \param parent protocol layer, which is typically a PHY, or FRAME
  * \param user_id user id from ISN_PROTO_USERx

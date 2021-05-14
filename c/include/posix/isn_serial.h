@@ -1,7 +1,8 @@
 /** \file
  *  \brief ISN serial Driver Implementation
- *  \author Stanislav <stanislav@isotel.eu>, Uros Platise <uros@isotel.eu>
- *
+ */
+/**
+ * \ingroup GR_ISN_POSIX
  * \defgroup GR_ISN_SERIAL ISN POSIX serial Driver
  *
  * # Scope
@@ -24,7 +25,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
- * (c) Copyright 2019, Isotel, http://isotel.eu
+ * (c) Copyright 2019, Isotel, http://isotel.org
  */
 
 #ifndef ISN_SERIAL_DRIVER_H
@@ -75,7 +76,7 @@ extern isn_serial_driver_params_t isn_serial_driver_default_params;
  * Create a new serial driver instance
  *
  * \param port name
- * \params serial port parameters, NULL for default parameters
+ * \param params serial port parameters, NULL for default parameters
  * \param child binding layer
  * \returns a valid isn_serial_driver_t instance or NULL or error with errno set.
  */

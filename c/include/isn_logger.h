@@ -1,6 +1,3 @@
-/** \file
- *  \brief ISN Logger - Reporting / Tracing
- */
 #ifndef ISN_LOGGER_H
 #define ISN_LOGGER_H
 
@@ -51,4 +48,4 @@ if (P_LOGGER <= ISN_LOGGER_LOG_LEVEL_TRACE) { \
     fprintf(stdout, "[trace] %s:%d: %s, " P_FMT "\n", __FILE__, __LINE__, __func__, ## __VA_ARGS__); \
 }
 
-#endif //ISN_LOGGER_H
+#endif

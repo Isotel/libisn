@@ -1,9 +1,9 @@
 /** \file
  *  \brief ISN UART Driver for PSoC4, PSoC5, and PSoC6
- *  \author Uros Platise <uros@isotel.eu>
+ *  \author Uros Platise <uros@isotel.org>
  *  \see isn_uart.c
  *
- * \defgroup GR_ISN_PSoC_UART ISN Driver for PSoC UART
+ * \defgroup GR_ISN_PSoC_UART PSoC UART Driver
  *
  * # Scope
  *
@@ -24,7 +24,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
- * (c) Copyright 2019, Isotel, http://isotel.eu
+ * (c) Copyright 2019, Isotel, http://isotel.org
  */
 
 #ifndef __ISN_UART_H__
@@ -46,10 +46,6 @@ typedef struct {
     uint8_t rxbuf[UART_RXBUF_SIZE];
     int buf_locked;
     size_t rx_size;
-    size_t rx_dropped;
-    size_t rx_counter;
-    size_t rx_retry;
-    size_t tx_counter;
 }
 isn_uart_t;
 
@@ -65,10 +61,11 @@ int isn_uart_poll(isn_uart_t *obj);
 /** Collect new data to frames, which are then forwarded based on timing properties
  * \returns number of bytes received or negative value of dropped bytes
  */
-int isn_uart_collect(isn_uart_t *obj, size_t maxsize, volatile uint32_t *counter, uint32_t timeout);
+int isn_uart_collect(isn_uart_t *obj, size_t maxsize, const volatile uint32_t *counter, uint32_t timeout);
 
 /** Initialize
  *
+ * \param obj
  * \param child use the next layer, like isn_frame
  */
 void isn_uart_init(isn_uart_t *obj, isn_layer_t* child);

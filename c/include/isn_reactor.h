@@ -1,6 +1,11 @@
 /** \file
  *  \brief Isotel Sensor Network Reactor
- *  \author <uros@isotel.eu>
+ *  \author <uros@isotel.org>
+ */
+/**
+ * \ingroup GR_ISN
+ * \defgroup GR_ISN_Reactor Reactor
+ * \brief Schedules Timed Events with optional Mutexes, and Event-like Library Calls
  */
 
 #ifndef __ISN_REACTOR_H__
@@ -24,7 +29,7 @@ typedef uint32_t isn_reactor_time_t;
 typedef void* (* isn_reactor_tasklet_t)(const void* arg);
 typedef void* (* isn_reactor_caller_t)(isn_reactor_tasklet_t tasklet, const void* arg, const void* retval);
 
-extern const volatile isn_reactor_time_t* _isn_reactor_timer;
+extern isn_reactor_time_t const volatile * _isn_reactor_timer;
 extern isn_reactor_time_t _isn_reactor_active_timestamp;
 
 typedef struct isn_tasklet_entry {
@@ -80,14 +85,26 @@ isn_reactor_mutex_t isn_reactor_getmutex();
  */
 int isn_reactor_mutexqueue(const isn_reactor_tasklet_t tasklet, const void* arg, isn_reactor_mutex_t mutex_bits);
 
-/** Lock given mutex bit(s), one or more at the same time, which will stop execution of tasklets in the same mutex group */
-void isn_reactor_mutex_lock(isn_reactor_mutex_t mutex_bits);
+/** Lock given mutex bit(s), one or more at the same time, which will stop execution of
+ *  tasklets in the same mutex group
+ *
+ *  \param mutex_bits obtained with the isn_reactor_getmutex()
+ *  \returns 0 on success if lock was obtained, non-zero indiates that this particulr mutex was already locked
+ */
+int isn_reactor_mutex_lock(isn_reactor_mutex_t mutex_bits);
 
-/** Unlock mutex bits */
-void isn_reactor_mutex_unlock(isn_reactor_mutex_t mutex_bits);
+/** Unlock mutex bits
+ * \param mutex_bits obtained with the isn_reactor_getmutex()
+ * \returns 0 on success, non-zero if lock was already released
+ */
+int isn_reactor_mutex_unlock(isn_reactor_mutex_t mutex_bits);
 
-/** \returns non-zero if locked */
-uint32_t isn_reactor_mutex_is_locked(isn_reactor_mutex_t mutex_bits);
+/** Check if locked
+ *
+ * \param mutex_bits obtained with the isn_reactor_getmutex()
+ * \returns non-zero if locked
+ */
+int isn_reactor_mutex_is_locked(isn_reactor_mutex_t mutex_bits);
 
 /** Is tasklet still pending in the queue, given by exact specs to ensure full integrity
  *
@@ -102,6 +119,12 @@ int isn_reactor_isvalid(int index, const isn_reactor_tasklet_t tasklet, const vo
  * \returns 0 if no-longer in queue or invalid index, and 1 when modified successfully
  */
 int isn_reactor_change_timed(int index, const isn_reactor_tasklet_t tasklet, const void* arg, isn_reactor_time_t newtime);
+
+/** Modify time for reoccuring (self-triggered) event, from the event.
+ *  So the function modifies the time of the active event and only has effect
+ *  if event returns with a pointer to itself.
+ */
+int isn_reactor_change_timed_self(isn_reactor_time_t newtime);
 
 /** Drop specific tasklet
  * \returns 0 if no-longer in queue or invalid index, and 1 when modified successfully
@@ -123,6 +146,12 @@ int isn_reactor_step(void);
  * \returns time to next execution referred to a timer
  */
 isn_reactor_time_t isn_reactor_run(void);
+
+/** Self-test, performs basic and mutex queues check
+ *  Side effect, it uses one mutex and does not free it.
+ * \returns 0 on success, or negative value showing progress
+ */
+int isn_reactor_selftest();
 
 /** Initialize reactor and provide queue buffer */
 void isn_reactor_init(isn_tasklet_entry_t *tasklet_queue, size_t queue_size, const volatile isn_reactor_time_t* timer);

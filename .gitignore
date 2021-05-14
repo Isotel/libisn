@@ -1,3 +1,6 @@
 cmake-*/
 .idea/
 *.o
+CMakeFiles/
+CMakeCache.txt
+.vscode/
