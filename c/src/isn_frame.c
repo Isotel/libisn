@@ -18,6 +18,12 @@
 
 #include <string.h>
 #include "isn_frame.h"
+#include "debug.h"
+
+//
+isn_layer_t *trigger_layer;
+
+//
 
 /**\{ */
 
@@ -58,7 +64,6 @@ static void isn_frame_free(isn_layer_t *drv, const void *ptr) {
     const uint8_t *buf = ptr;
     if (buf) obj->parent->free(obj->parent, buf - 1);
 }
-
 
 static int isn_frame_send(isn_layer_t *drv, void *dest, size_t size) {
     isn_frame_t *obj = (isn_frame_t *)drv;
