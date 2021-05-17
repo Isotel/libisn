@@ -18,12 +18,6 @@
 
 #include <string.h>
 #include "isn_frame.h"
-#include "debug.h"
-
-//
-isn_layer_t *trigger_layer;
-
-//
 
 /**\{ */
 
