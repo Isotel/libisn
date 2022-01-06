@@ -44,6 +44,21 @@ extern volatile const isn_clock_counter_t *isn_clock_counter;    ///< Pointer to
 /* Public functions                                                     */
 /*----------------------------------------------------------------------*/
 
+/** A helper function to find out the diff between two timestamps, works only if distance is less than a half
+ * \returns clock difference (a - b), handles overflows properly
+ */
+static inline int32_t isn_clock_diff(isn_clock_counter_t a, isn_clock_counter_t b) { 
+    return (int32_t)(a - b);
+};
+
+/** Time elapsed since some timestamp, works only if distance is less than a half
+ * \param since timestamp
+ * \returns clock difference from (now - timestamp), handles overflows properly
+ */
+static inline int32_t isn_clock_elapsed(isn_clock_counter_t since) {
+    return isn_clock_diff(ISN_CLOCK_NOW, since);
+}
+
 /** Initialize data structure, called automatically by the isn_clock_start(),
  *  however on multi-cores, only one core should call isn_clock_start() and
  *  the other isn_clock_init() only.
