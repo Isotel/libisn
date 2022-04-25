@@ -1,19 +1,42 @@
 /** \file
- *  \author Uros Platise <uros@isotel.eu>
+ *  \brief ISN USBUART Driver for PSoC4 and PSoC5
+ *  \author Uros Platise <uros@isotel.org>
+ *  \see isn_usbuart.c
+ * 
+ * \defgroup GR_ISN_PSoC_USBUART PSoC USBUART Driver
+ * 
+ * # Scope
+ * 
+ * Tiny implementation of the ISN Device Driver for the Cypress PSoC4, PSoC5 USBUART.
+ * 
+ * # Usage
+ * 
+ * Place USBUART component in the PSoC Creator 4.2 and name it USBUART.
+ * 
+ * ~~~
+ * isn_dispatch_t isn_dispatch;
+ * isn_frame_t isn_frame;
+ * isn_usbuart_t isn_usbuart;
+ * 
+ * isn_frame_init(&isn_frame, ISN_FRAME_MODE_COMPACT, &isn_dispatch, &(isn_receiver_t){terminal_recv}, &isn_usbuart, &counter_1kHz, 100);
+ * 
+ * CyGlobalIntEnable;
+ * isn_usbuart_init(&isn_usbuart, USBUART_3V_OPERATION, &isn_frame);
+ * ~~~
  */
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  * 
- * (c) Copyright 2019, Isotel, http://isotel.eu
+ * (c) Copyright 2019, Isotel, http://isotel.org
  */
 
 
 #ifndef __ISN_USBUART_H__
 #define __ISN_USBUART_H__
 
-#include "isn.h"
+#include "isn_def.h"
 
 #define TXBUF_SIZE  64
 #define RXBUF_SIZE  64
@@ -28,6 +51,7 @@ typedef struct {
     uint8_t txbuf[TXBUF_SIZE];
     uint8_t rxbuf[RXBUF_SIZE];
     int buf_locked;
+    size_t rx_size;
 }
 isn_usbuart_t;
 
@@ -42,6 +66,7 @@ size_t isn_usbuart_poll(isn_usbuart_t *obj);
 
 /** Initialize
  * 
+ * \param obj
  * \param mode USBUART_3V_OPERATION
  * \param child use the next layer, like isn_frame
  */
