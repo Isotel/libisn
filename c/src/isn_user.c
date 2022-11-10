@@ -17,6 +17,7 @@
  */
 
 #include <string.h>
+#include <stdlib.h>
 #include "isn_user.h"
 
 /**\{ */
@@ -48,19 +49,27 @@ static int isn_user_send(isn_layer_t *drv, void *dest, size_t size) {
 
 static size_t isn_user_recv(isn_layer_t *drv, const void *src, size_t size, isn_layer_t *caller) {
     isn_user_t *obj = (isn_user_t *)drv;
-    const uint8_t *buf = src;
-    if (*buf == obj->user_id) {
-        size_t passed = obj->child->recv(obj->child, buf+1, size-1, drv) + 1;
-        if (passed > 0) {
-            obj->drv.stats.rx_counter += passed-1;    // Only account passed data to avoid retries
-            obj->drv.stats.rx_packets++;
+    if (src && size && obj->child) {
+        const uint8_t *buf = src;
+        if (*buf == obj->user_id) {
+            size_t passed = obj->child->recv(obj->child, buf+1, size-1, drv);
+            if (passed > 0 || size == 1) {  // user stream can receive zero-payload in which case we must also confirm
+                obj->drv.stats.rx_packets++;
+                obj->drv.stats.rx_counter += passed;
+                obj->drv.stats.rx_dropped += size - passed - 1;
+                return size; // currently we do not support fragmenting and we always ack the whole packet
+            }
+            obj->drv.stats.rx_retries++;
+            return 0; // receiver was not able to receive neither a byte, so we need to retry
         }
-        return passed;
     }
-    return 0;
+    obj->drv.stats.rx_dropped += size;
+    return size;
 }
 
 void isn_user_init(isn_user_t *obj, isn_layer_t* child, isn_layer_t* parent, uint8_t user_id) {
+    ASSERT(obj);
+    ASSERT(parent);
     memset(&obj->drv, 0, sizeof(obj->drv));
     obj->drv.getsendbuf = isn_user_getsendbuf;
     obj->drv.send       = isn_user_send;
@@ -69,6 +78,15 @@ void isn_user_init(isn_user_t *obj, isn_layer_t* child, isn_layer_t* parent, uin
     obj->user_id        = user_id;
     obj->child          = child;
     obj->parent         = parent;
+}
+
+isn_user_t* isn_user_create() {
+    isn_user_t* obj = malloc(sizeof(isn_user_t));
+    return obj;
+}
+
+void isn_user_drop(isn_user_t *obj) {
+    free(obj);
 }
 
 /** \} \endcond */

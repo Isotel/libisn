@@ -73,6 +73,10 @@ isn_redirect_t;
  */
 void isn_redirect_init(isn_redirect_t *obj, isn_layer_t* target);
 
+isn_redirect_t* isn_redirect_create();
+
+void isn_redirect_drop(isn_redirect_t *obj);
+
 /** Loopback - Redirect Back to the Caller
  * 
  * It is a special case of the redirect behaviour in which case data is 
@@ -84,10 +88,11 @@ inline static void isn_loopback_init(isn_redirect_t *obj) { isn_redirect_init(ob
 
 /** Enable Fragmentation
  * 
- * Means that a driver checks will forward data even if target has less than required
- * amount of buffer available. This is works for streaming data and is only possible if 
- * there are no other packet oriented
- * protocols in the loop.
+ * Allows loopback driver to fragment the incoming packet into smaller chunks,
+ * according to the maximum size accepted by the taget driver.
+ * 
+ * \note Fragmentation only works on streams which are then able to assemble-back the
+ *   fragmented layers, as i.e. frame layer.
  * 
  * \param obj
  * \param state set to non-zero value to enable fragmentation

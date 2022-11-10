@@ -13,6 +13,12 @@
  *  - Kits: CY8CKIT-062-BLE
  *
  * \cond Implementation
+ * 
+ * This is a provisory driver and needs major redesign:
+ * 
+ * - use of interrupts (for <100 kbps there is no need for DMA)
+ * - import circular, variable len, buffers from uart_udb
+ * - add radioactivity
  */
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -27,6 +33,14 @@
 #include "config.h"
 #include "isn_clock.h"
 #include "PSoC/isn_uart.h"
+
+#define RX_FIFO_SIZE    64
+#define TX_FIFO_SIZE    64
+
+static uint8_t rx_buf[RX_FIFO_SIZE];
+static uint8_t rx_size;
+
+static uint8_t tx_buf[TX_FIFO_SIZE];
 
 /**\{ */
 
@@ -80,9 +94,9 @@ static int isn_uart_getsendbuf(isn_layer_t *drv, void **dest, size_t size, const
     if (UART_TX_is_ready(size) && !obj->buf_locked) {
         if (dest) {
             obj->buf_locked = 1;
-            *dest = obj->txbuf;
+            *dest = tx_buf;
         }
-        return (size > UART_TXBUF_SIZE) ? UART_TXBUF_SIZE : size;
+        return (size > TX_FIFO_SIZE) ? TX_FIFO_SIZE : size;
     }
     if (dest) {
         *dest = NULL;
@@ -92,14 +106,14 @@ static int isn_uart_getsendbuf(isn_layer_t *drv, void **dest, size_t size, const
 
 static void isn_uart_free(isn_layer_t *drv, const void *ptr) {
     isn_uart_t *obj = (isn_uart_t *)drv;
-    if (ptr == obj->txbuf) {
+    if (ptr == tx_buf) {
         obj->buf_locked = 0;             // we only support one buffer so we may free
     }
 }
 
 static int isn_uart_send(isn_layer_t *drv, void *dest, size_t size) {
     isn_uart_t *obj = (isn_uart_t *)drv;
-    assert(size <= UART_TXBUF_SIZE);
+    assert(size <= TX_FIFO_SIZE);
     if (size) {
         ASSERT_UNTIL( UART_TX_is_ready(size), UART_TIMEOUT );
         UART_PutArray(dest, size);
@@ -114,38 +128,39 @@ static int isn_uart_send(isn_layer_t *drv, void *dest, size_t size) {
  * Check if there are new bytes pending in the buffer, and collect them in the RX buffer.
  * In the next step try to forward data as long they're not accepted by the receiver.
  */
-int isn_uart_collect(isn_uart_t *obj, size_t maxsize, const volatile uint32_t *counter, uint32_t timeout) {
+int isn_uart_collect(isn_uart_t *obj, size_t maxsize, uint32_t timeout) {
     static uint32_t ts = 0;
     size_t size = UART_GetNumInRxFifo();
     if (size) {
-        if ( (size + obj->rx_size) > UART_RXBUF_SIZE ) size = UART_RXBUF_SIZE - obj->rx_size;
+        if ( (size + rx_size) > RX_FIFO_SIZE ) size = RX_FIFO_SIZE - rx_size;
         if ( size ) {
-            UART_GetArray(&obj->rxbuf[obj->rx_size], size);
-            obj->rx_size += size;
+            UART_GetArray(&rx_buf[rx_size], size);
+            rx_size += size;
             obj->drv.stats.rx_counter += size;
-            ts = *counter;
+            ts = isn_clock_now();
         }
         else obj->drv.stats.rx_dropped++; // It hasn't been really dropped yet \todo Read overflow from low-level driver
     }
-    if (obj->rx_size >= maxsize || ((*counter - ts) > timeout && obj->rx_size > 0)) {
-        size = obj->child_driver->recv(obj->child_driver, obj->rxbuf, obj->rx_size > maxsize ? maxsize : obj->rx_size, &obj->drv);
+    if (rx_size >= maxsize || ((isn_clock_now() - ts) > timeout && rx_size > 0)) {
+        size = obj->child_driver->recv(obj->child_driver, rx_buf, rx_size > maxsize ? maxsize : rx_size, obj);
         if (size) obj->drv.stats.rx_packets++;
-        if (size < obj->rx_size) {
+        if (size < rx_size) {
             obj->drv.stats.rx_retries++;    // Packet could not be fully accepted, retry next time
-            memmove(obj->rxbuf, &obj->rxbuf[size], obj->rx_size - size);
-            obj->rx_size -= size;
+            memmove(rx_buf, &rx_buf[size], rx_size - size);
+            rx_size -= size;
         }
-        else obj->rx_size = 0;  // handles case if recv() returns size higher than rx_size
+        else rx_size = 0;  // handles case if recv() returns size higher than rx_size
     }
     return size;
 }
 
 int isn_uart_poll(isn_uart_t *obj) {
-    uint32_t dummy_counter = 0;
-    return isn_uart_collect(obj, 1, &dummy_counter, 0);
+    return isn_uart_collect(obj, 1, 0);
 }
 
 void isn_uart_init(isn_uart_t *obj, isn_layer_t* child) {
+    ASSERT(obj);
+    ASSERT(child);
     memset(&obj->drv, 0, sizeof(obj->drv));
     obj->drv.getsendbuf = isn_uart_getsendbuf;
     obj->drv.send = isn_uart_send;
@@ -153,7 +168,7 @@ void isn_uart_init(isn_uart_t *obj, isn_layer_t* child) {
     obj->drv.free = isn_uart_free;
     obj->child_driver = child;
     obj->buf_locked = 0;
-    obj->rx_size    = 0;
+    rx_size    = 0;
     UART_Start();
 }
 

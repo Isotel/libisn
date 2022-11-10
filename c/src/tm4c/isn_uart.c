@@ -77,10 +77,14 @@ static int isn_uart_send(isn_layer_t *drv, void *dest, size_t size) {
     return size;
 }
 
-size_t isn_uart_poll(isn_uart_t *obj) {
+/**
+ * Check if there are new bytes pending in the buffer, and collect them in the RX buffer.
+ * In the next step try to forward data as long they're not accepted by the receiver.
+ */
+int isn_uart_collect(isn_uart_t *obj, size_t maxsize, uint32_t timeout) {
     size_t size = 0;
     if (obj->rx_size) {
-        size = obj->child_driver->recv(obj->child_driver, obj->rxbuf, obj->rx_size, &obj->drv);
+        size = obj->child_driver->recv(obj->child_driver, obj->rxbuf, obj->rx_size, obj);
         IntDisable(obj->intnum);
         if (size < obj->rx_size) {
             obj->rx_retry++;    // Packet could not be fully accepted, retry next time
@@ -93,6 +97,10 @@ size_t isn_uart_poll(isn_uart_t *obj) {
     return size;
 }
 
+size_t isn_uart_poll(isn_uart_t *obj) {
+    return isn_uart_collect(obj, 1, 0);
+}
+
 void UART0_Handler(void) {
     uint32_t status = UARTIntStatus(UART0_BASE,0);
     UARTIntClear(UART0_BASE,status);
@@ -101,7 +109,7 @@ void UART0_Handler(void) {
         while (UARTCharsAvail(UART0_BASE)) {
             UARTCharGetNonBlocking(UART0_BASE);
         }
-        objs[0]->rx_error++;
+        objs[0]->drv.stats.rx_errors++;
     }
     else if (status & (UART_INT_RX|UART_INT_RT) ) {
         while (UARTCharsAvail(UART0_BASE) && objs[0]->rx_size < UART_RXBUF_SIZE) {
@@ -118,7 +126,8 @@ void UART1_Handler(void) {
         while (UARTCharsAvail(UART1_BASE)) {
             UARTCharGetNonBlocking(UART1_BASE);
         }
-        objs[1]->rx_error++;
+        objs[1]->drv.stats.rx_errors++;
+        HWREG(UART_BASE + UART_O_DR) = '$';
     }
     else if (status & (UART_INT_RX|UART_INT_RT) ) {
         while (UARTCharsAvail(UART1_BASE) && objs[1]->rx_size < UART_RXBUF_SIZE) {
@@ -126,6 +135,33 @@ void UART1_Handler(void) {
         }
     }
 }
+
+void ConfigureUART(uint8_t hwVersionMotherboard)
+{   // debug console - UART6
+    if(hwVersionMotherboard <= 4 ) {
+        UART_BASE = UART0_BASE;
+        SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
+        SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);
+        GPIOPinConfigure(GPIO_PA0_U0RX);
+        GPIOPinConfigure(GPIO_PA1_U0TX);
+        GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
+        UARTClockSourceSet(UART_BASE, UART_CLOCK_PIOSC);
+        UARTFIFOEnable(UART_BASE);
+        UARTStdioConfig(0, 115200, 16000000);
+    } else {
+        UART_BASE = UART6_BASE;
+        SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOP);
+        SysCtlPeripheralEnable(SYSCTL_PERIPH_UART6);
+        GPIOPinConfigure(GPIO_PP0_U6RX);
+        GPIOPinConfigure(GPIO_PP1_U6TX);
+        GPIOPinTypeUART(GPIO_PORTP_BASE, GPIO_PIN_0 | GPIO_PIN_1);
+        UARTClockSourceSet(UART6_BASE, UART_CLOCK_PIOSC);
+        UARTFIFOLevelSet(UART6_BASE, UART_FIFO_TX7_8, UART_FIFO_RX6_8);
+        UARTFIFOEnable(UART6_BASE);
+        UARTStdioConfig(6, 115200, 16000000);
+    }
+}
+
 
 void isn_uart_init(isn_uart_t *obj, isn_layer_t* child, uint8_t port) {
     uint32_t status;
@@ -143,11 +179,11 @@ void isn_uart_init(isn_uart_t *obj, isn_layer_t* child, uint8_t port) {
             obj->DMArx = UDMA_CH8_UART0RX;
             obj->DMAtx = UDMA_CH9_UART0TX;
             objs[0] = obj;
-            ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
-            ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);
-            ROM_GPIOPinConfigure(GPIO_PA0_U0RX);
-            ROM_GPIOPinConfigure(GPIO_PA1_U0TX);
-            ROM_GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
+            SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
+            SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);
+            GPIOPinConfigure(GPIO_PA0_U0RX);
+            GPIOPinConfigure(GPIO_PA1_U0TX);
+            GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
             break;
         case 1:
             obj->base = UART1_BASE;
@@ -164,7 +200,7 @@ void isn_uart_init(isn_uart_t *obj, isn_layer_t* child, uint8_t port) {
     }
 
     UARTClockSourceSet(obj->base, UART_CLOCK_PIOSC);
-    UARTFIFOLevelSet(obj->base, UART_FIFO_TX7_8, UART_FIFO_RX6_8);
+    UARTFIFOLevelSet(obj->base, UART_FIFO_TX7_8, UART_FIFO_RX1_8);
     UARTFIFOEnable(obj->base);
     UARTEnable(obj->base);
     UARTConfigSetExpClk(obj->base, 16000000, PSOC_UART_BAUDRATE,

@@ -30,10 +30,7 @@
 #ifndef __ISN_UART_H__
 #define __ISN_UART_H__
 
-#include "isn_def.h"
-
-#define UART_TXBUF_SIZE  64
-#define UART_RXBUF_SIZE  64
+#include "isn_reactor.h"
 
 /** ISN Layer Driver */
 typedef struct {
@@ -42,10 +39,7 @@ typedef struct {
 
     /* Private data */
     isn_driver_t* child_driver;
-    uint8_t txbuf[UART_TXBUF_SIZE];
-    uint8_t rxbuf[UART_RXBUF_SIZE];
     int buf_locked;
-    size_t rx_size;
 }
 isn_uart_t;
 
@@ -53,15 +47,42 @@ isn_uart_t;
 /* Public functions                                                     */
 /*----------------------------------------------------------------------*/
 
-/** Polls for a new data received from PC and dispatch them
- * \returns number of bytes received or negative value of dropped bytes
+/** Polling based data fetch
+ *
+ *  Collect new data to frames, which are then forwarded based on timing properties.
+ *
+ * \param maxsize defines maximum forwarding packet capacity
+ * \param frame timeout, measured from the lastly received byte
+ * \returns returns remaining bytes in the FIFO
  */
-int isn_uart_poll(isn_uart_t *obj);
+int isn_uart_collect(isn_uart_t *obj, size_t maxsize, uint32_t timeout);
 
-/** Collect new data to frames, which are then forwarded based on timing properties
- * \returns number of bytes received or negative value of dropped bytes
+/** Enable Reactor
+ *
+ * \param receive_threshold triggers a receive call whenever fifo has received this amount of bytes
+ * \param timeout trigger a receive call since the last byte received, defined by the frame_timeout
  */
-int isn_uart_collect(isn_uart_t *obj, size_t maxsize, const volatile uint32_t *counter, uint32_t timeout);
+void isn_uart_radiate(isn_uart_t *obj, size_t receive_threshold, isn_clock_counter_t timeout, isn_reactor_queue_t priority_queue,
+                      isn_reactor_mutex_t busy_mutex, isn_reactor_mutex_t holdon_mutex);
+
+/** Modify the priority queue
+ *
+ * \param priority_queue, reactor queue or NULL to disable
+ * \returns previous queue
+ */
+isn_reactor_queue_t isn_uart_radiate_setqueue(isn_reactor_queue_t priority_queue);
+
+/* Low-level functions */
+
+/** \return Size of pending receive buffer to be collected by the isn_uart_collect() or
+ *          automatically triggered by the event if isn_uart_radiate() function initialized it.
+ */
+size_t isn_uart_getrecvsize();
+
+/** \return next received byte or -1 if non is available directly from the receive fifo
+ *          buffer. isn_uart_collect() will therefore not collect manually taken bytes.
+ */
+int isn_uart_getrecvbyte();
 
 /** Initialize
  *

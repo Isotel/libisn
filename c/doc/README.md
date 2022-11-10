@@ -34,6 +34,7 @@ Suggested reading:
 - \ref GR_ISN
 - \ref GR_ISN_Message
 - \ref GR_ISN_Frame
+- \ref GR_ISN_Frame_Long
 - \ref GR_ISN_User
 - \ref GR_ISN_Dispatch
 - \ref GR_ISN_Redirect

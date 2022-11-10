@@ -100,6 +100,9 @@ int isn_serial_driver_poll(isn_serial_driver_t* driver, time_ms_t timeout);
  */
 void isn_serial_driver_setlogging(isn_logger_level_t level);
 
+
+isn_driver_stats_t* isn_serial_driver_get_stats(isn_serial_driver_t* driver);
+
 #ifdef __cplusplus
 }
 #endif

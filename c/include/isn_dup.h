@@ -63,6 +63,10 @@ isn_dup_t;
 /* Public functions                                                     */
 /*----------------------------------------------------------------------*/
 
+isn_dup_t* isn_dup_create();
+
+void isn_dup_drop(isn_dup_t *obj);
+
 /** Dispatcher
  * 
  * \param obj

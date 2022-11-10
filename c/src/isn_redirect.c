@@ -17,6 +17,7 @@
  */
 
 #include <string.h>
+#include <stdlib.h>
 #include "isn_redirect.h"
 
 /**\{ */
@@ -27,7 +28,7 @@ static size_t isn_redirect_recv(isn_layer_t *drv, const void *src, size_t size, 
     void *obuf = NULL;
     int bs = target->getsendbuf(target, &obuf, size, caller);
     if ( bs == size || (bs > 0 && obj->en_fragment) ) {
-        memcpy(obuf, src, bs);
+        isn_memcpy(obuf, src, bs);
         target->send(target, obuf, bs);
         obj->drv.stats.tx_counter += bs;
         return bs;
@@ -40,10 +41,20 @@ static size_t isn_redirect_recv(isn_layer_t *drv, const void *src, size_t size, 
 }
 
 void isn_redirect_init(isn_redirect_t *obj, isn_layer_t* target) {
+    ASSERT(obj);
     memset(&obj->drv, 0, sizeof(obj->drv));
     obj->drv.recv = isn_redirect_recv;
     obj->target   = target;
     obj->en_fragment=0;
+}
+
+isn_redirect_t* isn_redirect_create() {
+    isn_redirect_t* obj = malloc(sizeof(isn_redirect_t));
+    return obj;
+}
+
+void isn_redirect_drop(isn_redirect_t *obj) {
+    free(obj);
 }
 
 /** \} \endcond */

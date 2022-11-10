@@ -80,6 +80,10 @@ isn_user_t;
 /* Public functions                                                     */
 /*----------------------------------------------------------------------*/
 
+isn_user_t* isn_user_create();
+
+void isn_user_drop(isn_user_t *obj);
+
 /** User Layer
  * 
  * \param obj
@@ -88,6 +92,8 @@ isn_user_t;
  * \param user_id user id from ISN_PROTO_USERx
  */
 void isn_user_init(isn_user_t *obj, isn_layer_t* child, isn_layer_t* parent, uint8_t user_id);
+
+static inline void isn_user_setchild(isn_user_t *obj, isn_layer_t* child) { obj->child = child; };
 
 #ifdef __cplusplus
 }

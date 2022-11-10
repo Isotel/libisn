@@ -6,7 +6,7 @@
  * \ingroup GR_ISN
  * \cond Implementation
  * \addtogroup GR_ISN_Reactor
- 
+
  * Implementation of a very reduced and simple reactor,
  * supporting qeued tasklets offering timed execution,
  * mutex locking, and return to callers.
@@ -51,14 +51,21 @@
         head may also be the 0-th entry to simplify algo.
         Easy to upgrade with priorities.
 */
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * (c) Copyright 2019 - 2021, Isotel, http://isotel.org
+ */
 
 #include <project.h>                // Currently supported/tested on PSoC5 only
+#include <stdarg.h>
 #include "isn_reactor.h"
 
 #if(CYDEV_CHIP_FAMILY_USED == CYDEV_CHIP_FAMILY_PSOC4)
 # error "PSoC4 has not been yet verified and supported"
 #elif(CYDEV_CHIP_FAMILY_USED == CYDEV_CHIP_FAMILY_PSOC5)
-# warning "Experimental optimizations in mutexes and queue linking"
 # define MUTEX_SHIFT                20
 # define MUTEX_COUNT                4
 # define MUTEX_MASK                 0xF
@@ -66,7 +73,6 @@
 # define INDEX_SHIFT                24
 # define QUEUE_FUNC_ADDR(i)         (void *)((uint32_t)(queue_table[i].tasklet) & FUNC_ADDR_MASK)
 #elif(CYDEV_CHIP_FAMILY_USED == CYDEV_CHIP_FAMILY_PSOC6)
-# warning "Experimental support of reactor"
 # define MUTEX_SHIFT                28
 # define MUTEX_COUNT                4
 # define MUTEX_MASK                 0xF
@@ -86,9 +92,8 @@
 
 /**\{ */
 
-isn_reactor_time_t _isn_reactor_active_timestamp;
-isn_reactor_time_t const volatile * _isn_reactor_timer;
-isn_reactor_time_t isn_reactor_timer_trigger;
+isn_clock_counter_t _isn_reactor_active_timestamp;
+isn_clock_counter_t isn_reactor_timer_trigger;
 
 static isn_tasklet_entry_t *queue_table;
 static size_t queue_len;
@@ -122,7 +127,93 @@ static inline void atomic_clear_bits(volatile uint32_t* addr, uint32_t mask) {
     CyExitCriticalSection(s);
 }
 
-int isn_reactor_call_at(const isn_reactor_tasklet_t tasklet, const isn_reactor_caller_t caller, const void* arg, isn_reactor_time_t time) {
+void isn_reactor_initchannel(isn_tasklet_queue_t *queue, isn_tasklet_entry_t* fifobuf, size_t size_mask) {
+    if (fifobuf && size_mask) {
+        queue->fifo = fifobuf;
+        queue->size_mask = size_mask;
+        queue->rdi = queue->wri = 0;
+        queue->wakeup = NULL;
+    }
+}
+
+int isn_reactor_channel_at(isn_tasklet_queue_t *queue, const isn_reactor_tasklet_t tasklet, void* arg, isn_clock_counter_t timed) {
+    size_t next = (queue->wri+1) & queue->size_mask;
+    if (queue->rdi != next) {
+        isn_tasklet_entry_t *e = &queue->fifo[queue->wri];
+        e->tasklet = tasklet;
+        e->caller = NULL;
+        e->caller_queue = NULL;
+        e->arg = arg;
+        e->time = timed;
+        __DSB();
+        queue->wri = next;
+        if (queue->wakeup) queue->wakeup();
+        return 0;
+    }
+    return -1;
+}
+
+int isn_reactor_channel_call_at(isn_tasklet_queue_t *queue, const isn_reactor_tasklet_t tasklet,
+                                isn_tasklet_queue_t *caller_queue, const isn_reactor_tasklet_t caller,
+                                void* arg, isn_clock_counter_t timed) {
+    size_t next = (queue->wri+1) & queue->size_mask;
+    if (queue->rdi != next) {
+        isn_tasklet_entry_t *e = &queue->fifo[queue->wri];
+        e->tasklet = tasklet;
+        e->caller = caller;
+        e->caller_queue = caller_queue;
+        e->arg = arg;
+        e->time = timed;
+        __DSB();
+        queue->wri = next;
+        if (queue->wakeup) queue->wakeup();
+        return 0;
+    }
+    return -1;
+}
+
+int isn_reactor_channel_return(isn_tasklet_queue_t *queue, const isn_reactor_tasklet_t caller, void* arg) {
+    size_t next = (queue->wri+1) & queue->size_mask;
+    if (queue->rdi != next) {
+        isn_tasklet_entry_t *e = &queue->fifo[queue->wri];
+        e->tasklet = NULL;
+        e->caller = caller;
+        e->caller_queue = NULL;
+        e->arg = arg;
+        e->time = ISN_CLOCK_NOW;
+        __DSB();
+        queue->wri = next;
+        if (queue->wakeup) queue->wakeup();
+        return 0;
+    }
+    return -1;
+}
+
+int isn_reactor_pass(const isn_reactor_tasklet_t tasklet, void* arg) {
+    if (self_index < 0) return -1;
+
+    critical_section_state_t state = critical_section_enter();
+    if (QUEUE_NEXT(queue_free) == queue_len || tasklet == NULL) {
+        critical_section_exit(state);
+        return -1;
+    }
+    queue_table[queue_free].tasklet  = (void*)((uint32_t)queue_table[queue_free].tasklet | ((uint32_t)tasklet & (FUNC_ADDR_MASK | (MUTEX_MASK<<MUTEX_SHIFT)) ));
+    queue_table[queue_free].caller   = queue_table[self_index].caller;
+    queue_table[self_index].caller   = NULL;
+    queue_table[queue_free].caller_queue = queue_table[self_index].caller_queue;
+    queue_table[self_index].caller_queue = NULL;
+    queue_table[queue_free].arg      = arg;
+    queue_table[queue_free].time     = ISN_CLOCK_NOW;
+    queue_changed = 1;   // we have at least one to work-on
+    int queue_index = queue_free;
+    ++isn_tasklet_queue_size;
+
+    queue_free = QUEUE_NEXT(queue_free);
+    critical_section_exit(state);
+    return queue_index;
+}
+
+int isn_reactor_call_at(const isn_reactor_tasklet_t tasklet, const isn_reactor_tasklet_t caller, void* arg, isn_clock_counter_t time) {
     critical_section_state_t state = critical_section_enter();
     if (QUEUE_NEXT(queue_free) == queue_len || tasklet == NULL) {
         critical_section_exit(state);
@@ -130,6 +221,7 @@ int isn_reactor_call_at(const isn_reactor_tasklet_t tasklet, const isn_reactor_c
     }
     queue_table[queue_free].tasklet  = (void*)((uint32_t)queue_table[queue_free].tasklet | ((uint32_t)tasklet & (FUNC_ADDR_MASK | (MUTEX_MASK<<MUTEX_SHIFT)) ));
     queue_table[queue_free].caller   = caller;
+    queue_table[queue_free].caller_queue = NULL;
     queue_table[queue_free].arg      = arg;
     queue_table[queue_free].time     = time;
     queue_changed = 1;   // we have at least one to work-on
@@ -141,10 +233,34 @@ int isn_reactor_call_at(const isn_reactor_tasklet_t tasklet, const isn_reactor_c
     return queue_index;
 }
 
+static int isn_reactor_callx_at(const isn_reactor_tasklet_t tasklet, isn_tasklet_queue_t *caller_queue, const isn_reactor_tasklet_t caller, void* arg, isn_clock_counter_t time) {
+    critical_section_state_t state = critical_section_enter();
+    if (QUEUE_NEXT(queue_free) == queue_len || tasklet == NULL) {
+        critical_section_exit(state);
+        return -1;
+    }
+    queue_table[queue_free].tasklet  = (void*)((uint32_t)queue_table[queue_free].tasklet | ((uint32_t)tasklet & (FUNC_ADDR_MASK | (MUTEX_MASK<<MUTEX_SHIFT)) ));
+    queue_table[queue_free].caller   = caller;
+    queue_table[queue_free].caller_queue = caller_queue;
+    queue_table[queue_free].arg      = arg;
+    queue_table[queue_free].time     = time;
+    queue_changed = 1;   // we have at least one to work-on
+    int queue_index = queue_free;
+    ++isn_tasklet_queue_size;
+
+    queue_free = QUEUE_NEXT(queue_free);
+    critical_section_exit(state);
+    return queue_index;
+}
+
+int isn_reactor_userqueue(const isn_reactor_tasklet_t tasklet, void* arg, isn_clock_counter_t timed, isn_reactor_mutex_t mutex_bits) {
+    return isn_reactor_call_at((void *)(((uint32_t)tasklet & FUNC_ADDR_MASK) | mutex_bits), NULL, arg, timed);
+}
+
 /** At the moment we only have 4 muxes */
 isn_reactor_mutex_t isn_reactor_getmutex() {
     static uint32_t muxes = 0;
-    if (muxes > MUTEX_COUNT) return 0; else return (1<<muxes++)<<MUTEX_SHIFT;
+    return muxes > MUTEX_COUNT ? 0 : (1<<muxes++) << MUTEX_SHIFT;
 }
 
 int isn_reactor_mutex_lock(isn_reactor_mutex_t mutex_bits) {
@@ -165,7 +281,7 @@ int isn_reactor_mutex_is_locked(isn_reactor_mutex_t mutex_bits) {
     return (queue_mutex_locked_bits & mutex_bits) != 0;
 }
 
-int isn_reactor_mutexqueue(const isn_reactor_tasklet_t tasklet, const void* arg, isn_reactor_mutex_t mutex_bits) {
+int isn_reactor_mutexqueue(const isn_reactor_tasklet_t tasklet, void* arg, isn_reactor_mutex_t mutex_bits) {
     return isn_reactor_queue( (void *)(((uint32_t)tasklet & FUNC_ADDR_MASK) | mutex_bits), arg);
 }
 
@@ -174,7 +290,7 @@ int isn_reactor_isvalid(int index, const isn_reactor_tasklet_t tasklet, const vo
     return (QUEUE_FUNC_ADDR(index) == tasklet && queue_table[index].arg == arg) ? 1 : 0;
 }
 
-int isn_reactor_change_timed(int index, const isn_reactor_tasklet_t tasklet, const void* arg, isn_reactor_time_t newtime) {
+int isn_reactor_change_timed(int index, const isn_reactor_tasklet_t tasklet, const void* arg, isn_clock_counter_t newtime) {
     critical_section_state_t state = critical_section_enter();
     int retval = isn_reactor_isvalid(index, tasklet, arg);
     if (retval) {
@@ -185,7 +301,7 @@ int isn_reactor_change_timed(int index, const isn_reactor_tasklet_t tasklet, con
     return retval;
 }
 
-int isn_reactor_change_timed_self(isn_reactor_time_t newtime) {
+int isn_reactor_change_timed_self(isn_clock_counter_t newtime) {
     if (self_index >= 0) {
         queue_table[self_index].time = newtime;
         queue_changed = 1;
@@ -197,7 +313,7 @@ int isn_reactor_change_timed_self(isn_reactor_time_t newtime) {
 int isn_reactor_drop(int index, const isn_reactor_tasklet_t tasklet, const void* arg) {
     critical_section_state_t state = critical_section_enter();
     int retval = isn_reactor_isvalid(index, tasklet, arg);
-    if (retval) queue_table[index].tasklet = NULL;
+    if (retval && index != self_index) queue_table[index].tasklet = NULL;
     critical_section_exit(state);
     return retval;
 }
@@ -225,6 +341,8 @@ int isn_reactor_dropall(const isn_reactor_tasklet_t tasklet, const void* arg) {
 }
 #endif
 
+#define MAX_SLEEP_TIME    0x0FFFFFFF    // \todo Consider appropriate max time according to isn_clock.c constraints, derive macro from there
+
 /** Execute first available, skip mutexed and delayed.
  *
  *  Due to the nature of list operation, all mutex locked tasklet will concentrate at the beginning
@@ -238,27 +356,45 @@ int isn_reactor_dropall(const isn_reactor_tasklet_t tasklet, const void* arg) {
  */
 int isn_reactor_step(void) {
     int executed = 0;
-    int32_t next_time_to_exec = 0x0FFFFFF;
+    int32_t next_time_to_exec = MAX_SLEEP_TIME;
 
-    if (queue_changed || (int32_t)(isn_reactor_timer_trigger - *_isn_reactor_timer) <= 0) {
+    if (queue_changed || (int32_t)(isn_reactor_timer_trigger - ISN_CLOCK_NOW) <= 0) {
         uint8_t i, j;
         queue_changed = 0;   // assume we are executing the last, if ISR meanwhile occurs it will only set it to number of queue size
 
         for (i=0, j=QUEUE_NEXT(0); QUEUE_FUNC_VALID(j); ) {
             if ( !(QUEUE_MUTEX(j) & queue_mutex_locked_bits) ) {
-                int32_t time_to_exec = (int32_t)(QUEUE_TIME(j) - *_isn_reactor_timer);
+                int32_t time_to_exec = isn_clock_remains(QUEUE_TIME(j));
                 if (time_to_exec <= 0) {
                     isn_reactor_tasklet_t tasklet = QUEUE_FUNC_ADDR(j);
                     _isn_reactor_active_timestamp = queue_table[j].time;
                     self_index                    = j;
 
                     executed++;
-                    const void *retval = NULL;
+                    void *retval = NULL;
                     if (tasklet) {
-                        retval = tasklet( (const void *)queue_table[j].arg );
-                        if (retval == (const void *)tasklet) continue; // returning self means retrigger the event
+                        retval = tasklet( queue_table[j].arg );
+
+                        // returning self means retrigger the event, but in next pass to avoid forever looping/stalling
+                        // another possibility to retrigger the event is to set event time in advance, so even if
+                        // Dual feature is useful, i.e. interrupt may keep prolonging the time of a valid event, which
+                        // valid event has just being executed in the background. Interrupt would see it valid, so
+                        // it may prolong its time, while it would not create a new one. And the event which is fetching
+                        // the bytes is for sure retriggered.
+                        time_to_exec = isn_clock_remains(QUEUE_TIME(j));
+                        if (retval == (const void *)tasklet || time_to_exec >= 0) {
+                            if (time_to_exec < 0) {
+                                queue_table[j].time = isn_clock_now();  // theoretically prevents overflow of constantly re-occuring event which would get blocked after clock elapsed 1/2 of the cycle
+                                next_time_to_exec = 0;
+                            }
+                            else next_time_to_exec = time_to_exec;
+                            goto do_next_event;
+                        }
                         if ( queue_table[j].caller ) {
-                            queue_table[j].caller( tasklet, (const void *)queue_table[j].arg, retval );
+                            if (queue_table[j].caller_queue) {
+                                isn_reactor_channel_return( queue_table[j].caller_queue, queue_table[j].caller, retval);
+                            }
+                            else queue_table[j].caller( retval );
                         }
                     }
                     QUEUE_LINK(i, QUEUE_NEXT(j));
@@ -276,17 +412,45 @@ int isn_reactor_step(void) {
                     next_time_to_exec = time_to_exec;
                 }
             }
+do_next_event:
             i = j;
             j = QUEUE_NEXT(j);
         }
-        isn_reactor_timer_trigger = *_isn_reactor_timer + next_time_to_exec;
+        isn_reactor_timer_trigger = ISN_CLOCK_NOW + next_time_to_exec;
     }
     self_index = -1;
     return executed;
 }
 
-isn_reactor_time_t isn_reactor_run(void) {
+isn_clock_counter_t isn_reactor_run(void) {
     while( isn_reactor_step() );
+    return isn_reactor_timer_trigger;
+}
+
+isn_clock_counter_t isn_reactor_runall(isn_tasklet_queue_t *queue, ...) {
+    va_list va;
+    va_start(va, queue);
+    while(queue) {
+        while(queue->rdi != queue->wri) {
+            isn_tasklet_entry_t *e = &queue->fifo[queue->rdi];
+            /*
+                If tasklet is given it is a normal cross-cpu call, we spawn it into the queue
+                If tasklet is NULL but caller is given it is a return feedback call; currently tasklet for cross-cpu
+                is marked as NULL (TBD if really needed)
+            */
+            if (e->tasklet) isn_reactor_callx_at( e->tasklet, e->caller_queue, e->caller, e->arg, e->time ); else
+            if (e->caller)  e->caller( e->arg );
+            queue->rdi = (queue->rdi+1) & queue->size_mask;
+        }
+        queue = va_arg(va, isn_tasklet_queue_t *);
+    }
+    va_end(va);
+
+    // local events are called last, as above function may either post timed events
+    // or actual events may change local events, which could impact on the time to
+    // trigger.
+    while( isn_reactor_step() );
+
     return isn_reactor_timer_trigger;
 }
 
@@ -294,7 +458,7 @@ int isn_reactor_selftest() {
     static int count = 0;
     isn_reactor_mutex_t mux = isn_reactor_getmutex();
 
-    void *count_event(const void *arg) {
+    void *count_event(void *arg) {
         count++;
         return NULL;
     }
@@ -312,8 +476,8 @@ int isn_reactor_selftest() {
     return 0;
 }
 
-void isn_reactor_init(isn_tasklet_entry_t *tasklet_queue, size_t queue_size, const volatile isn_reactor_time_t* timer) {
-    _isn_reactor_timer = timer;
+void isn_reactor_init(isn_tasklet_entry_t *tasklet_queue, size_t queue_size) {
+    ASSERT(tasklet_queue);
     queue_table = tasklet_queue;
     queue_len   = queue_size;
     queue_free  = 1; // leave 0th cell for algo simplification as well as last.

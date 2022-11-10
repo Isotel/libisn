@@ -22,17 +22,17 @@
 /**\{ */
 
 int isn_write_atleast(isn_layer_t *layer, const void *src, size_t size, size_t minsize) {
-    if (size) {
-        void *buf;
-        isn_driver_t *drv = (isn_driver_t *)layer;
-        int avail = drv->getsendbuf(drv, &buf, size, drv);
-        if (buf) {
-            if (avail >= (int)minsize) {
-                memcpy(buf, src, avail);
-                return drv->send(drv, buf, avail);
-            }
-            drv->free(drv, buf);
+    ASSERT(layer);
+    if (size > 0) ASSERT(src);
+    void *buf;
+    isn_driver_t *drv = (isn_driver_t *)layer;
+    int avail = drv->getsendbuf(drv, &buf, size, drv);
+    if (buf) {
+        if (avail >= (int)minsize) {
+            isn_memcpy(buf, src, avail);
+            return drv->send(drv, buf, avail);
         }
+        drv->free(drv, buf);
     }
     return 0;
 }

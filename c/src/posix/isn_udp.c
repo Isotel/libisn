@@ -95,9 +95,7 @@ struct isn_udp_driver_s {
 
 static time_ms_t monotonic_ms_time() {
     struct timespec tm;
-    if (clock_gettime(CLOCK_MONOTONIC, &tm) != 0) {
-        return -1;
-    }
+    if (clock_gettime(CLOCK_MONOTONIC, &tm) != 0) return -1;
     return tm.tv_sec * 1000 + tm.tv_nsec / 1000000;
 }
 
@@ -108,17 +106,14 @@ static void udp_clients_init(udp_clients_t* cls) {
 static void udp_clients_insert(udp_clients_t* cls, time_ms_t tm,
                                const struct sockaddr* sa,
                                socket_length_type sa_len) {
-    for (unsigned i = 0; i < sizeof(cls->clients) / sizeof(cls->clients[0]);
-         ++i) {
+    for (unsigned i = 0; i < sizeof(cls->clients) / sizeof(cls->clients[0]); ++i) {
         udp_client_t* const uc = &cls->clients[i];
         if (uc->s_addr_len == 0) {
             uc->s_addr_len = sa_len;
             uc->last_access = tm;
             memcpy(&uc->socket_addr, sa, sa_len);
             ++cls->active_clients;
-            LOG_INFO(isn_logger_level, "client connected %s:%d",
-                     inet_ntoa(((struct sockaddr_in*) sa)->sin_addr),
-                     ((struct sockaddr_in*) sa)->sin_port);
+            LOG_INFO(isn_logger_level, "client connected %s:%d", inet_ntoa(((struct sockaddr_in*) sa)->sin_addr), ((struct sockaddr_in*) sa)->sin_port);
             break;
         }
     }
@@ -128,52 +123,38 @@ static void udp_client_remove(udp_clients_t* cls, udp_client_t* uc) {
     LOG_INFO(isn_logger_level, "client disconnected %s",
              inet_ntoa(((struct sockaddr_in*) &uc->socket_addr)->sin_addr))
     uc->s_addr_len = 0;
-    --cls->active_clients;
+    cls->active_clients--;
 }
 
 static void udp_clients_update(udp_clients_t* cls, const struct sockaddr* sa,
                                socket_length_type sa_len) {
     const time_ms_t tm = monotonic_ms_time();
-    if (tm < 0) {
-        return;
-    }
+    if (tm < 0) return;
     int new_client = 1;
 
-    for (unsigned i = 0; i < sizeof(cls->clients) / sizeof(cls->clients[0]);
-         ++i) {
+    for (unsigned i = 0; i < sizeof(cls->clients) / sizeof(cls->clients[0]); ++i) {
         udp_client_t* const uc = &cls->clients[i];
 
         if (uc->s_addr_len) {
-            if (tm - uc->last_access > CLIENT_TIMEOUT_MS) {
-                udp_client_remove(cls, uc);
-            } else if (uc->s_addr_len == sa_len &&
-                       memcmp(&uc->socket_addr, sa, sa_len) == 0) {
+            if (tm - uc->last_access > CLIENT_TIMEOUT_MS) udp_client_remove(cls, uc);
+            else if (uc->s_addr_len == sa_len && memcmp(&uc->socket_addr, sa, sa_len) == 0) {
                 uc->last_access = tm;
                 new_client = 0;
             }
         }
     }
-    if (new_client) {
-        udp_clients_insert(cls, tm, sa, sa_len);
-    }
+    if (new_client) udp_clients_insert(cls, tm, sa, sa_len);
 }
 
 static void udp_clients_send(udp_clients_t* cls, SOCKET socket, const void* buf,
                              size_t sz) {
     const time_ms_t tm = monotonic_ms_time();
-    if (tm < 0 || cls->active_clients == 0) {
-        return;
-    }
-    for (size_t i = 0; i < sizeof(cls->clients) / sizeof(cls->clients[0]);
-         ++i) {
+    if (tm < 0 || cls->active_clients == 0) return;
+    for (size_t i = 0; i < sizeof(cls->clients) / sizeof(cls->clients[0]); ++i) {
         udp_client_t* const uc = &cls->clients[i];
         if (uc->s_addr_len) {
-            if (tm - uc->last_access > CLIENT_TIMEOUT_MS) {
-                udp_client_remove(cls, uc);
-            } else {
-                sendto(socket, (const char*) buf, sz, 0, &uc->socket_addr,
-                       uc->s_addr_len);
-            }
+            if (tm - uc->last_access > CLIENT_TIMEOUT_MS) udp_client_remove(cls, uc);
+            else sendto(socket, (const char*) buf, sz, 0, &uc->socket_addr, uc->s_addr_len);
         }
     }
 }
@@ -198,17 +179,13 @@ static int get_send_buf(isn_layer_t* drv, void** buf, size_t size, const isn_lay
         }
         return (size > MAXIMUM_PACKET_SIZE) ? MAXIMUM_PACKET_SIZE : size;
     }
-    if (buf) {
-        *buf = NULL;
-    }
+    if (buf) *buf = NULL;
     return -1;
 }
 
 static void free_send_buf(isn_layer_t* drv, const void* buf) {
     isn_udp_driver_t* const driver = (isn_udp_driver_t*) drv;
-    if (buf == driver->tx_buf) {
-        driver->buf_locked = 0; // we only support one buffer so we may free
-    }
+    if (buf == driver->tx_buf) driver->buf_locked = 0; // we only support one buffer so we may free
 }
 
 static int send_buf(isn_layer_t* drv, void* buf, size_t sz) {
@@ -228,23 +205,18 @@ static int isn_udp_driver_init(isn_udp_driver_t* driver, uint16_t port,
              sizeof(driver->clients.clients) / sizeof(driver->clients.clients[0]))
 
     driver->sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (driver->sock == INVALID_SOCKET) {
-        return -EINVAL;
-    }
+    if (driver->sock == INVALID_SOCKET) return -EINVAL;
 
     struct sockaddr_in socket_addr;
     socket_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     socket_addr.sin_family = AF_INET;
     socket_addr.sin_port = htons(port);
 
-    if (setsockopt(driver->sock, SOL_SOCKET, SO_REUSEADDR,
-                   (const char*) &(int) { 1 }, sizeof(int)) == -1 ||
-        setsockopt(driver->sock, SOL_SOCKET, SO_BROADCAST,
-                   (const char*) &broadcast, sizeof(broadcast)) == -1) {
+    if (setsockopt(driver->sock, SOL_SOCKET, SO_REUSEADDR, (const char*) &(int) { 1 }, sizeof(int)) == -1 ||
+        setsockopt(driver->sock, SOL_SOCKET, SO_BROADCAST, (const char*) &broadcast, sizeof(broadcast)) == -1) {
         return -SOCKET_ERRNO(errno);
     }
-    if (bind(driver->sock, (struct sockaddr*) (&socket_addr),
-             sizeof(struct sockaddr_in)) == -1) {
+    if (bind(driver->sock, (struct sockaddr*) (&socket_addr), sizeof(struct sockaddr_in)) == -1) {
         return -SOCKET_ERRNO(errno);
     }
     memset(&driver->drv, 0, sizeof(driver->drv));
@@ -271,8 +243,7 @@ int isn_udp_driver_addclient(isn_udp_driver_t* driver, const char* hostname,
     int err = getaddrinfo(hostname, port, &hints, &result);
     if (err == 0) {
         for (rp = result; rp != NULL; rp = rp->ai_next) {
-            udp_clients_insert(&driver->clients, monotonic_ms_time(), rp->ai_addr,
-                               sizeof(struct sockaddr));
+            udp_clients_insert(&driver->clients, monotonic_ms_time(), rp->ai_addr, sizeof(struct sockaddr));
         }
     }
     freeaddrinfo(result);
@@ -283,8 +254,7 @@ isn_udp_driver_t* isn_udp_driver_create(uint16_t serverport, isn_layer_t* child,
                                         int broadcast) {
     isn_udp_driver_t* driver = malloc(sizeof(isn_udp_driver_t));
     memset(driver, 0, sizeof(*driver));
-    return isn_udp_driver_init(driver, serverport, child, broadcast) >= 0 ? driver
-                                                                          : NULL;
+    return isn_udp_driver_init(driver, serverport, child, broadcast) >= 0 ? driver : NULL;
 }
 
 #ifdef __CLION_IDE__
@@ -292,8 +262,7 @@ isn_udp_driver_t* isn_udp_driver_create(uint16_t serverport, isn_layer_t* child,
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
 #endif
 void isn_udp_driver_free(isn_udp_driver_t* driver) {
-    if (driver)
-        free(driver);
+    if (driver) free(driver);
 }
 #ifdef __CLION_IDE__
 #pragma clang diagnostic pop
@@ -316,11 +285,12 @@ int isn_udp_driver_poll(isn_udp_driver_t* driver, time_ms_t timeout) {
         struct sockaddr client_addr;
         socket_length_type sa_len = sizeof(struct sockaddr_in);
 
-        const ssize_t sz =
-                recvfrom(driver->sock, buf, sizeof(buf), 0, &client_addr, &sa_len);
+        const ssize_t sz = recvfrom(driver->sock, buf, sizeof(buf), 0, &client_addr, &sa_len);
         if (sz > 0) {
+            //for (int i=0; i<sz; i++) printf("%.2x ", buf[i]); 
+            //printf(": udp recv %ld bytes:\n", sz);
             udp_clients_update(&driver->clients, &client_addr, sa_len);
-            driver->child_driver->recv(driver->child_driver, buf, sz, &driver->drv);
+            driver->child_driver->recv(driver->child_driver, buf, sz, driver);
         }
     }
     return driver->clients.active_clients;

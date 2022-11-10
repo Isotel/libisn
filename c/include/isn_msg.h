@@ -89,7 +89,8 @@
  * The table is then passed to the isn_msg_init(). The parent protocol (`isn_parent_protocol`)
  * will act as stimulus from the interface side, and the device itself posts message by
  * isn_msg_send() and isn_msg_sendqby() methods. The main loop handles these requests
- * in the main-loop by calling isn_msg_sched().
+ * in the main-loop by calling isn_msg_sched() or these are automatically handled by
+ * reactor, use isn_msg_radiate() to enable this feature.
  * ~~~
  * isn_message_t isn_message;
  *
@@ -123,15 +124,15 @@
  *
  * Message layer allows to send request to other device for arguments using the
  * isn_msg_send() or isn_msg_sendqby() and providing ISN_MSG_PRI_QUERY_ARGS
- * for the priority field. After a request to receive the arguments is sent, message is 
- * locked into the ISN_MSG_PRI_QUERY_WAIT state, in which it 
+ * for the priority field. After a request to receive the arguments is sent, message is
+ * locked into the ISN_MSG_PRI_QUERY_WAIT state, in which it
  * will not send out any data until a valid reply is received.
- * 
+ *
  * Example of a communication flow between two devices:
  *\msc
  *  width = "1000";
  *  R [label="Requester"], A [label="Message Layer"], B [label="Message Layer"], T [label="Target"];
- * 
+ *
  *  R => A [label="isn_msg_sendqby(.., my_message_cb, ISN_MSG_PRI_QUERY_ARGS)"];
  *  A -x B [label="ISN_MSG_PRI_QUERY_ARGS"];
  *  A => A [label="ISN_MSG_PRI_QUERY_WAIT"];
@@ -151,18 +152,18 @@
  * Similarly one devices needs to update arguments (send data) to
  * other device, which is done by setting the priority ISN_MGG_PRI_UPDATE_ARGS.
  * Message layer itself employs single input buffer. At higher reception rate
- * buffer is to be provided by the receiving layer. However, when 
+ * buffer is to be provided by the receiving layer. However, when
  * ISN_MGG_PRI_UPDATE_ARGS is used to send a message, then further transmissions
  * are blocked to ensure buffer overflow does not happen at the receiving device.
  * Updating arguments handle another special case:
- * 
+ *
  * - while transaction is in progress, requester may send another update,
  *   and thus ignoring previous transaction, looks like this:
- * 
+ *
  *\msc
  *  width = "1000";
  *  R [label="Requester"], A [label="Message Layer"], B [label="Message Layer"], T [label="Target"];
- * 
+ *
  *  R => A [label="isn_msg_sendqby(.., my_message_cb, ISN_MSG_PRI_UPDATE_ARGS)"];
  *  R <<= A [label="my_message_cb()"];
  *  R >> A [label="return &data"];
@@ -226,7 +227,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
- * (c) Copyright 2019, Isotel, http://isotel.org
+ * (c) Copyright 2019 - 2021, Isotel, http://isotel.org
  */
 
 
@@ -234,9 +235,35 @@
 #define __ISN_MSG_H__
 
 #include "isn_def.h"
+#include "isn_reactor.h"
+#include "isn_logger.h"
 
 #ifdef __cplusplus
 extern "C" {
+#endif
+
+/*--------------------------------------------------------------------*/
+/* CONFIGURATION                                                      */
+/*--------------------------------------------------------------------*/
+
+/** Enable fast loading of messages
+ *
+ * When the msg layer receives a query, desc or arg, for the ISN_MSG_NUM_LAST
+ * message, it will mark all messages, for desc or arg to be sent out.
+ * Note that arg messages that are zero-sized are not sent.
+ *
+ * Drastical speed out allows a single query for all desc, and a single
+ * query for all args.
+ */
+#ifndef CONFIG_ISN_MSG_FAST_LOADING
+# define CONFIG_ISN_MSG_FAST_LOADING 0
+#endif
+
+/** A single query for args can be sent out and further requests are blockd until reply is received.
+ *  If zero, then multiple queries are sent out at as fast as possible.
+ */
+#ifndef CONFIG_ISN_MSG_SINGLE_QUERY
+# define CONFIG_ISN_MSG_SINGLE_QUERY 0
 #endif
 
 /*--------------------------------------------------------------------*/
@@ -260,7 +287,7 @@ extern "C" {
 #define ISN_MSG_PRI_DESCRIPTIONLOW  30      ///< Lower priority description, used in fast loading
 //#define ISN_MSG_PRI_QUERY_DESC    28      ///< Request for description, NOT SUPPORTED YET
 #define ISN_MSG_PRI_QUERY_ARGS      27      ///< Request for arguments
-#define ISN_MSG_PRI_QUERY_WAIT      26      ///< Wait for reply
+#define ISN_MSG_PRI_QUERY_WAIT      26      ///< Wait for reply, internal intermediate state do NOT USE
 #define ISN_MGG_PRI_UPDATE_ARGS     25      ///< Send an update and block further transmission
 #define ISN_MSG_PRI_HIGHEST         0x0f    ///< When other peer requests args, these are send with this priority
 #define ISN_MSG_PRI_HIGH            0x08
@@ -284,6 +311,9 @@ extern uint8_t handler_priority;
 
 #define RECV_MESSAGE_SIZE           64
 
+/** Internal struct, note the alignment of the message_buffer, which should be aligned to (4)
+ *  More info on align: https://stackoverflow.com/questions/4306186/structure-padding-and-packing
+ */
 typedef struct {
     /* ISN Abstract Class Driver */
     isn_driver_t drv;
@@ -291,17 +321,22 @@ typedef struct {
     /* Private data */
     isn_driver_t* parent_driver;
     isn_msg_table_t* isn_msg_table;             ///< Ref to the message table
-    uint8_t isn_msg_table_size;                 ///< It's size
     uint8_t message_buffer[RECV_MESSAGE_SIZE];  ///< Receive buffer
+    uint8_t isn_msg_table_size;                 ///< It's size
     uint8_t isn_msg_received_msgnum;            ///< Receive buffer's message number to which isn_msg_received_data belongs
     void* isn_msg_received_data;                ///< Receive buffer's pointer
     const void *handler_input;                  ///< Copy of handlers input data to be used with isn_msg_isinput_valid() only
     int32_t handler_msgnum;                     ///< Message number of a handler in a call
     uint8_t handler_priority;
     uint8_t pending;
+    uint8_t active;                             ///< Number of active messages
     uint8_t msgnum;                             ///< Last msgnum sent
     uint8_t lock;                               ///< Lock, to prevent sending further messages, when waiting for ack (reply)
     uint32_t resend_timer;
+
+    isn_reactor_queue_t queue;                  ///< Reactor queue
+    isn_reactor_mutex_t busy_mutex;             ///< Controlled by msg layer when busy
+    isn_reactor_mutex_t holdon_mutex;           ///< Controlled by 3rd layer to delay execution
 }
 isn_message_t;
 
@@ -310,6 +345,10 @@ extern isn_message_t *isn_msg_self;
 /*----------------------------------------------------------------------*/
 /* Public functions                                                     */
 /*----------------------------------------------------------------------*/
+
+isn_message_t* isn_msg_create();
+
+void isn_msg_drop(isn_message_t *obj);
 
 /** Initialize Message Layer
  *
@@ -320,6 +359,15 @@ extern isn_message_t *isn_msg_self;
  */
 void isn_msg_init(isn_message_t *obj, isn_msg_table_t* messages, uint8_t size, isn_layer_t* parent);
 
+/** Enable reactor
+ *
+ * \param obj
+ * \param priority_queue sets the queue
+ * \param busy_mutex controlled by the message layer to retain pending events until ready
+ * \param holdon_mutex controlled by parent layers to get ready before message layer can push new messages
+ */
+void isn_msg_radiate(isn_message_t *obj, isn_reactor_queue_t priority_queue, isn_reactor_mutex_t busy_mutex, isn_reactor_mutex_t holdon_mutex);
+
 /** Schedule received callbacks and send those marked by isn_msg_send() or isn_msg_sendby()
  *
  * \param obj
@@ -327,7 +375,28 @@ void isn_msg_init(isn_message_t *obj, isn_msg_table_t* messages, uint8_t size, i
  */
 int isn_msg_sched(isn_message_t *obj);
 
+/**
+ * Post message by id, interrupt/thread safe
+ *
+ * Similar to isn_msg_send() but this one requires an explicit message id to avoid for looping
+ * from the interrupt calls.
+ *
+ * \param obj
+ * \param message_id
+ * \param priority defines order in which messages are sent out.
+ *        Setting MSB bit 0x80 will request to send out descriptors instead of a data
+ *
+ * We only want to increase priority and never reduce.
+ *
+ * \note So that's why request for DESC "clears" request for QUERY which obviously means
+ * that the other device have no information about this device, so it cannot serve
+ * it with args yet.
+ */
+void isn_msg_post(isn_message_t *obj, uint8_t message_id, uint8_t priority);
+
 /** Send message
+ *
+ * \see isn_msg_post for interrupt/thread safe call
  *
  * \param obj
  * \param message_id
@@ -337,7 +406,7 @@ int isn_msg_sched(isn_message_t *obj);
 void isn_msg_send(isn_message_t *obj, uint8_t message_id, uint8_t priority);
 
 /** Send message quickly by callback handler given msgnum, start of the search
- * 
+ *
  * Typical usage:
  * \code
  *    uint8_t msg1_idx = 0;
@@ -366,9 +435,9 @@ static inline uint8_t isn_msg_sendby(isn_message_t *obj, isn_events_handler_t hn
  *
  * This function may be called with a (retry) timer, every since (1 - 3 seconds) to
  * ensure other party responds to the messages. Function returns number of still pending
- * messages that have been rescheduled for transmission. If within certain time this 
- * value is not 0 means other party is not responding, indicating some issues on the other 
- * side. The parameter timeout if 0, means that rescheduling is done on each call 
+ * messages that have been rescheduled for transmission. If within certain time this
+ * value is not 0 means other party is not responding, indicating some issues on the other
+ * side. The parameter timeout if 0, means that rescheduling is done on each call
  * for events marked as ISN_MGG_PRI_UPDATE_ARGS and ISN_MSG_PRI_QUERY_WAIT. If timeout
  * is 1, or higher, then re-scheduling starts after 1, or 2, call to this function.
  *
@@ -389,18 +458,39 @@ int isn_msg_discardpending(isn_message_t *obj);
  * to a callback argument from message layer.
  *
  * Useful if same callback event is called from multiple sources.
- * 
+ *
  * \param obj
- * \param arg pointer to data provided by the callback 
+ * \param arg pointer to data provided by the callback
  * \returns Non-zero if valid and argument is non-zero, otherwise 0
  */
 int isn_msg_isinput_valid(isn_message_t *obj, const void *arg);
 
 /**
+ * Set logger (debugging) level
+ */
+void isn_msg_setlogging(isn_logger_level_t level);
+
+/**
+ * Returns number of active messages
+ *
+ * \param obj
+ * \return 0 if none, otherwise >0
+ */
+static inline int isn_msg_noactive(isn_message_t *obj) { return obj->active; }
+
+/**
+ * Is message being handled, either transaction, query, simple message sending, etc.
+ *
+ * \param obj
+ * \param msgnum index to message_id previously provided by this same function to speed up the search.
+ */
+static inline int isn_msg_isdone(isn_message_t *obj, uint8_t msgnum) { return obj->isn_msg_table[msgnum].priority == ISN_MSG_PRI_CLEAR;}
+
+/**
  * To be used within the callback, it may ask with which priority
  * was it called to be able to distinguish also from external
  * (HIGHEST) queries and internal ones
- * 
+ *
  * \param obj
  * \returns Non-zero if request is query
  */
@@ -409,9 +499,9 @@ static inline int isn_msg_isquery(isn_message_t *obj) {return obj->handler_prior
 /**
  * To be used within the callback, it may ask if data is a
  * reply to previously sent out query.
- * 
+ *
  * \param obj
- * \returns non-zero if message is a response to a ISN_MSG_PRI_QUERY_ARGS or just 
+ * \returns non-zero if message is a response to a ISN_MSG_PRI_QUERY_ARGS or just
  *          in-time received message (clears ISN_MSG_PRI_QUERY_ARGS)
  */
 static inline int isn_msg_isreply(isn_message_t *obj) {

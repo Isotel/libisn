@@ -25,23 +25,7 @@
 #define __ISN_UART_H__
 
 
-#include "../isn.h"
-#include <stdio.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include "driverlib/sysctl.h"
-#include "driverlib/gpio.h"
-#include "driverlib/uart.h"
-#include "driverlib/pin_map.h"
-#include "driverlib/interrupt.h"
-#include "inc/hw_memmap.h"
-#include "inc/hw_ints.h"
-#include "driverlib/rom.h"
-#include "utils/uartstdio.h"
-#include "string.h"
-#include "inc/hw_uart.h"
-#include "inc/hw_types.h"
-#include "driverlib/udma.h"
+#include "isn.h"
 
 #define PSOC_UART_BAUDRATE   115200   // default UART baudrate
 
@@ -60,8 +44,10 @@ typedef struct {
     isn_driver_t* child_driver;
     uint8_t txbuf[UART_TXBUF_SIZE];
     uint8_t rxbuf[UART_RXBUF_SIZE];
+    uint8_t rxbuf_aux[UART_RXBUF_SIZE];
     int buf_locked;
     uint8_t rx_size;
+    uint8_t rx_size_aux;
     size_t rx_retry;
     size_t rx_error;
     uint32_t base;
@@ -89,5 +75,6 @@ size_t isn_uart_poll(isn_uart_t *obj);
 void isn_uart_init(isn_uart_t *obj, isn_layer_t* child, uint8_t port);
 unsigned char UART_PutArray(uint8_t* dest,uint8_t size,uint32_t base, uint32_t uDMAbase);
 unsigned char UART_SpiUartReadRxData(void);
+void ConfigureUART(uint8_t hwVersionMotherboard);
 
 #endif

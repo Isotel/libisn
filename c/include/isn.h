@@ -9,6 +9,8 @@
 
 #include "isn_def.h"
 #include "isn_frame.h"
+#include "isn_frame_long.h"
+#include "isn_frame_jumbo.h"
 #include "isn_dispatch.h"
 #include "isn_redirect.h"
 #include "isn_user.h"

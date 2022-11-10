@@ -96,6 +96,10 @@ isn_dispatch_t;
 /* Public functions                                                     */
 /*----------------------------------------------------------------------*/
 
+isn_dispatch_t* isn_dispatch_create();
+
+void isn_dispatch_drop(isn_dispatch_t *obj);
+
 /** Dispatcher
  * 
  * \param obj

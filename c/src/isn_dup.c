@@ -28,6 +28,7 @@
  * (c) Copyright 2019, Isotel, http://isotel.org
  */
 
+#include <stdlib.h>
 #include "isn_dup.h"
 
 /**\{ */
@@ -41,10 +42,22 @@ static size_t isn_dup_recv(isn_layer_t *drv, const void *buf, size_t size, isn_l
 }
 
 void isn_dup_init(isn_dup_t *obj, isn_layer_t *child1, isn_layer_t *child2) {
+    ASSERT(obj);
+    ASSERT(child1);
+    ASSERT(child2);
     obj->drv.recv  = isn_dup_recv;
     obj->childs[0] = (isn_receiver_t *)child1;
     obj->childs[1] = (isn_receiver_t *)child2;
     obj->dup_errors = 0;
+}
+
+isn_dup_t* isn_dup_create() {
+    isn_dup_t* obj = malloc(sizeof(isn_dup_t));
+    return obj;
+}
+
+void isn_dup_drop(isn_dup_t *obj) {
+    free(obj);
 }
 
 /** \} \endcond */

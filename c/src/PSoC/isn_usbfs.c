@@ -23,9 +23,14 @@
  * and by zero-padding technique to fill the entire packet.
  */
 /*
- * (c) Copyright 2019, Isotel, http://isotel.org
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * (c) Copyright 2019 - 2021, Isotel, http://isotel.eu
  */
 
+#include <string.h>
 #include "project.h"
 #include "PSoC/isn_usbfs.h"
 
@@ -93,7 +98,7 @@ static int isn_usbfs_getsendbuf(isn_layer_t *drv, void **dest, size_t size, cons
     if (!obj->buf_locked) {
         // Find appropriate resource
         int current_ep = obj->next_send_ep;
-        while ( (inep_reservation[obj->next_send_ep - USB_SEND_EPst] != caller && 
+        while ( (inep_reservation[obj->next_send_ep - USB_SEND_EPst] != caller &&
                  inep_reservation[obj->next_send_ep - USB_SEND_EPst] != NULL) ||
                USBFS_GetEPState(obj->next_send_ep) != USBFS_IN_BUFFER_EMPTY) {
 
@@ -108,6 +113,7 @@ static int isn_usbfs_getsendbuf(isn_layer_t *drv, void **dest, size_t size, cons
     }
 none_avail:
     if (dest) {
+        obj->drv.stats.tx_retries++;
         *dest = NULL;
     }
     return -1;
@@ -122,12 +128,11 @@ static void isn_usbfs_free(isn_layer_t *drv, const void *ptr) {
 
 static int isn_usbfs_send(isn_layer_t *drv, void *dest, size_t size) {
     isn_usbfs_t *obj = (isn_usbfs_t *)drv;
-    assert(size <= TXBUF_SIZE);
+    ASSERT(size <= TXBUF_SIZE);
     if (size) {
         USBFS_LoadInEP(obj->buf_locked, dest, size);
         obj->drv.stats.tx_counter += size;
         obj->drv.stats.tx_packets++;
-        //if (++obj->next_send_ep > USB_SEND_EPend) obj->next_send_ep = USB_SEND_EPst;
     }
     isn_usbfs_free(drv, dest);
     return size;
@@ -142,21 +147,34 @@ size_t isn_usbfs_poll(isn_usbfs_t *obj) {
     if (obj->rx_size == 0) {
         if (USBFS_GetEPState(USB_RECV_EP) == USBFS_OUT_BUFFER_FULL) {
             USBFS_ReadOutEP(USB_RECV_EP, (uint8_t*)obj->rxbuf, obj->rx_size = USBFS_GetEPCount(USB_RECV_EP));
-            USBFS_EnableOutEP(USB_RECV_EP);
+            //USBFS_EnableOutEP(USB_RECV_EP);  -- already enabled in ReadOutEP
             obj->drv.stats.rx_counter += obj->rx_size;
             obj->drv.stats.rx_packets++;
+            obj->rx_fwed = 0;
         }
     }
     if (obj->rx_size) {
-        if (obj->child_driver->recv(obj->child_driver, obj->rxbuf, obj->rx_size, &obj->drv) >= obj->rx_size) {
+        size_t size = obj->child_driver->recv(obj->child_driver, &obj->rxbuf[obj->rx_fwed], obj->rx_size, obj);
+        if (size == 0) {
+            obj->drv.stats.rx_retries++;
+        }
+        else {
+            // USBFS is a packet oriented transfer, for which we require the receiver to 
+            // accept it all, or the rest is considered as dropped
+            // \todo If the next layer is frame it could handle partial processing
+            //obj->drv.stats.rx_retries++;
+            //obj->rx_fwed += size;
+            //obj->rx_size -= size;
+            obj->drv.stats.rx_dropped += obj->rx_size - size;
             obj->rx_size = 0;
         }
-        else obj->drv.stats.rx_retries++;    // Packet could not be fully accepted, retry next time
     }
     return obj->rx_size;
 }
 
 void isn_usbfs_init(isn_usbfs_t *obj, int mode, isn_layer_t* child) {
+    ASSERT(obj);
+    ASSERT(child);
     memset(&obj->drv, 0, sizeof(obj->drv));
     obj->drv.getsendbuf = isn_usbfs_getsendbuf;
     obj->drv.send = isn_usbfs_send;

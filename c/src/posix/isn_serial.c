@@ -79,6 +79,7 @@ static int get_send_buf(isn_layer_t* drv, void** buf, size_t size, const isn_lay
     if (buf) {
         *buf = NULL;
     }
+    
     return -1;
 }
 
@@ -96,14 +97,17 @@ static int send_buf(isn_layer_t* drv, void* buf, size_t sz) {
     DWORD bytes_written;
     if (WriteFile(driver->port_handle, buf, sz, &bytes_written, NULL) == 0) {
         LOG_ERROR(isn_logger_level, "unable to write to serial port [%lu]", GetLastError())
+        driver->drv.stats.tx_dropped += sz;
         return -1;
     }
     if (bytes_written != sz) {
         LOG_ERROR(isn_logger_level, "wrote only %ld bytes of %zu bytes", bytes_written, sz)
+         driver->drv.stats.tx_dropped += sz;
         return -1;
     }
 #else
     if (modify_file_flags(driver->fd, O_NONBLOCK, MODE_SET) == -1) {
+         driver->drv.stats.tx_dropped += sz;
         return -1;
     }
 
@@ -114,6 +118,7 @@ static int send_buf(isn_layer_t* drv, void* buf, size_t sz) {
         if (errno != EAGAIN) {
             LOG_ERROR(isn_logger_level, "unable to write to serial port [%s]",
                       strerror(errno))
+            driver->drv.stats.tx_dropped += sz;
             return -1;
         }
         struct timespec delay = {
@@ -125,6 +130,7 @@ static int send_buf(isn_layer_t* drv, void* buf, size_t sz) {
         if ((ret = write(driver->fd, buf, sz)) == -1) {
             LOG_ERROR(isn_logger_level, "unable to write to serial port [%s]",
                       strerror(errno))
+            driver->drv.stats.tx_dropped += sz;
             return -1;
         }
     }
@@ -132,10 +138,12 @@ static int send_buf(isn_layer_t* drv, void* buf, size_t sz) {
     if(ret != sz) {
         LOG_ERROR(isn_logger_level, "unable to write to serial port %d != %d [%s]",
                   (int) ret, (int) sz, strerror(errno))
+        driver->drv.stats.tx_dropped += sz;          
     }
 
 #endif
     free_send_buf(driver, buf);
+    driver->drv.stats.tx_counter += bytes_written;
     return bytes_written;
 }
 
@@ -297,6 +305,7 @@ int isn_serial_driver_poll(isn_serial_driver_t* driver, time_ms_t timeout) {
     };
     if (SetCommTimeouts(driver->port_handle, &timeouts) == 0) {
         LOG_FATAL(isn_logger_level, "unable to set timeouts of the serial port [%lu]", GetLastError())
+        driver->drv.stats.rx_errors += 1;
         return -1;
     }
     char buf[MAXIMUM_PACKET_SIZE];
@@ -315,6 +324,7 @@ int isn_serial_driver_poll(isn_serial_driver_t* driver, time_ms_t timeout) {
     FD_ZERO(&read_fds);
 
     if (modify_file_flags(driver->fd, O_NONBLOCK, MODE_CLEAR) == -1) {
+        driver->drv.stats.rx_errors += 1;
         return -1;
     }
 
@@ -326,6 +336,8 @@ int isn_serial_driver_poll(isn_serial_driver_t* driver, time_ms_t timeout) {
         if ((ret = select(driver->fd + 1, &read_fds, NULL, NULL, &tv)) == -1) {
             if (errno == EINTR || errno == EAGAIN) { continue; }
             LOG_ERROR(isn_logger_level, "select failed [%s]", strerror(errno));
+            driver->drv.stats.rx_errors += 1;
+            driver->drv.stats.rx_dropped += bytes_read;
             return -1;
         }
 
@@ -335,6 +347,8 @@ int isn_serial_driver_poll(isn_serial_driver_t* driver, time_ms_t timeout) {
 
         if ((ret = read(driver->fd, buf + bytes_read, sizeof(buf) - bytes_read)) == -1) {
             LOG_ERROR(isn_logger_level, "read failed [%s]", strerror(errno));
+            driver->drv.stats.rx_errors += 1;
+            driver->drv.stats.rx_dropped += bytes_read;
             return -1;
         }
         bytes_read += ret;
@@ -342,9 +356,9 @@ int isn_serial_driver_poll(isn_serial_driver_t* driver, time_ms_t timeout) {
 #endif
     if (bytes_read) {
         LOG_TRACE(isn_logger_level, "read %ld bytes [%s]", (long)bytes_read, hex_dump((unsigned char*)buf, bytes_read))
-        driver->child_driver->recv(driver->child_driver, buf, bytes_read, &driver->drv);
+        driver->child_driver->recv(driver->child_driver, buf, bytes_read, driver);
     }
-
+    driver->drv.stats.rx_counter += bytes_read;
     return bytes_read;
 }
 
@@ -363,6 +377,10 @@ void isn_serial_driver_free(isn_serial_driver_t* driver) {
 
 void isn_serial_driver_setlogging(isn_logger_level_t level) {
     isn_logger_level = level;
+}
+
+isn_driver_stats_t* isn_serial_driver_get_stats(isn_serial_driver_t* driver) {    
+    return &(driver->drv.stats);
 }
 
 #ifndef _WIN32

@@ -3,7 +3,7 @@
  *  \author Uros Platise <uros@isotel.org>
  *  \see https://www.isotel.org/isn
  *  \defgroup GR_ISN Isotel Sensor Networks
- * 
+ *
  * # Scope
  *
  * The [ISOTEL Sensor Network Protocol](https://www.isotel.org/isn/overview.html)
@@ -198,7 +198,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
- * (c) Copyright 2019, Isotel, http://isotel.org
+ * (c) Copyright 2019 - 2022, Isotel, http://isotel.org
  */
 
 #ifndef __ISN_DEF_H__
@@ -207,6 +207,7 @@
 #include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
+#include "config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -214,30 +215,46 @@ extern "C" {
 
 /**\{ */
 
-#define ISN_PROTO_FRAME     0x80
-#define ISN_PROTO_MSG       0x7F
-#define ISN_PROTO_TRANS     0x7E
-#define ISN_PROTO_TRANL     0x7D
-#define ISN_PROTO_XXTEA     0x7C
+#define ISN_PROTO_FRAME_MASK        0x80
+#define ISN_PROTO_FRAME             0x80    ///< 7th bit represent short/compact, and the lower 6-bits represent the length
+#define ISN_PROTO_FRAME_JUMBO_MASK  0xE0
+#define ISN_PROTO_FRAME_JUMBO       0x20    ///< the lower 5-bits form MSB part of the length
+#define ISN_PROTO_FRAME_LONG_MASK   0xF0
+#define ISN_PROTO_FRAME_LONG        0x10    ///< the lower 4-bits form MSB part of the length
 
-#define ISN_PROTO_USERMAX   ISN_PROTO_USER15
-#define ISN_PROTO_USER15    0x0f
-#define ISN_PROTO_USER14    0x0e
-#define ISN_PROTO_USER13    0x0d
-#define ISN_PROTO_USER12    0x0c
-#define ISN_PROTO_USER11    0x0b
-#define ISN_PROTO_USER10    0x0a
-#define ISN_PROTO_USER9     0x09
-#define ISN_PROTO_USER8     0x08
-#define ISN_PROTO_USER7     0x07
-#define ISN_PROTO_USER6     0x06
-#define ISN_PROTO_USER5     0x05
-#define ISN_PROTO_USER4     0x04
-#define ISN_PROTO_USER3     0x03
-#define ISN_PROTO_USER2     0x02
-#define ISN_PROTO_USER1     0x01
+#define ISN_PROTO_MSG               0x7F
+#define ISN_PROTO_TRANS             0x7E
+#define ISN_PROTO_TRANL             0x7D
+#define ISN_PROTO_XXTEA             0x7C
 
-#define ISN_PROTO_PING      0x00
+#define ISN_PROTO_USERMAX           ISN_PROTO_USER15
+#define ISN_PROTO_USER15            0x0f
+#define ISN_PROTO_USER14            0x0e
+#define ISN_PROTO_USER13            0x0d
+#define ISN_PROTO_USER12            0x0c
+#define ISN_PROTO_USER11            0x0b
+#define ISN_PROTO_USER10            0x0a
+#define ISN_PROTO_USER9             0x09
+#define ISN_PROTO_USER8             0x08
+#define ISN_PROTO_USER7             0x07
+#define ISN_PROTO_USER6             0x06
+#define ISN_PROTO_USER5             0x05
+#define ISN_PROTO_USER4             0x04
+#define ISN_PROTO_USER3             0x03
+#define ISN_PROTO_USER2             0x02
+#define ISN_PROTO_USER1             0x01
+
+#define ISN_PROTO_PING              0x00
+
+/** Event Callback Helper */
+#define ISN_EVENT_CB(f)     (isn_events_handler_t)f
+
+/* 24-bit Integers */
+typedef struct { signed   val:24; } __attribute__((packed)) int24_t;
+typedef struct { unsigned val:24; } __attribute__((packed)) uint24_t;
+
+/** Define structures with this attributes */
+#define ISN_PACKED_ALIGNED  __attribute__((packed)) __attribute__((aligned(4)))
 
 /**
  * Driver Statistics
@@ -245,17 +262,17 @@ extern "C" {
 typedef struct {
     uint32_t rx_packets;    ///< number of packets or frames received
     uint32_t rx_counter;    ///< number of bytes of user payload
-    uint32_t rx_errors;     ///< Received with errors
+    uint32_t rx_errors;     ///< Received packets with errors
     uint32_t rx_retries;    ///< number of retries to deliver the received message
-    uint32_t rx_dropped;    ///< Received successfully but couldn't be delivered in time
+    uint32_t rx_dropped;    ///< Received packets successfully but couldn't be delivered in time
     uint32_t tx_packets;    ///< number of packets or frames sent
     uint32_t tx_counter;    ///< number of bytes of user payload
-    uint32_t tx_dropped;    ///< Couldn't be sent
+    uint32_t tx_dropped;    ///< Packets that couldn't be sent
     uint32_t tx_retries;    ///< Number of retries
-} __attribute__((packed)) __attribute__((aligned(4))) isn_driver_stats_t;
+} ISN_PACKED_ALIGNED isn_driver_stats_t;
 
-#define ISN_DRIVER_STATS_DESC(cb) \
-    {0, sizeof(isn_driver_stats_t), cb, "RX rx{{:packets}={%lu}{:bytes}={%lu}{:errors}={%lu}"}, \
+#define ISN_DRIVER_STATS_DESC(cb, paragraph) \
+    {0, sizeof(isn_driver_stats_t), cb, paragraph "RX rx{{:packets}={%lu}{:bytes}={%lu}{:errors}={%lu}"}, \
     {0, 0,                        NULL, "+{:retries}={%lu}{:dropped}={%lu}}\nTX tx{{:packets}={%lu}"}, \
     {0, 0,                        NULL, "+{:bytes}={%lu}{:dropped}={%lu}{:retries}={%lu}}\n" }
                                       //"----+----1----+----2----+----3----+----4----+----5----+----6-"
@@ -277,6 +294,10 @@ typedef struct isn_driver_s {
      * \param size size of the received data
      * \param caller device driver structure, enbles simple echoing or multi-path replies
      * \returns number of bytes actually processed, the difference is considered as returned
+     *
+     * \todo convert return to an int, where negative number represents number of
+     *    missing packets, i.e. in packet ordering. Meaning of the currently returned
+     *    value 0 stays the same; source must retry with the same packet next time.
      */
     size_t (*recv)(isn_layer_t *drv, const void *src, size_t size, isn_layer_t *caller);
 
@@ -333,14 +354,53 @@ isn_receiver_t;
  */
 typedef void* (* isn_events_handler_t)(const void* arg);
 
+#if defined(__GNUC__)
+
+/** Volatile memcpy version */
+static inline void volatile_memcpy(volatile void* dst, volatile const void *src, size_t size) {
+    volatile uint8_t *dst_b = (volatile uint8_t *)dst;
+    volatile uint8_t *src_b = (volatile uint8_t *)src;
+    while(size-- > 0) *dst_b++ = *src_b++;
+};
+
+/**
+ * Buffer Copy, on multi-core + dma systems this can be a source of many issues
+ * that's why we default to volatile copy, but this does not solve cached memory
+ * issues and the DMA, ... user must place such buffers in non-cacheable areas
+ */
+void isn_memcpy(volatile void* dst, volatile const void *src, size_t size) __attribute__ ((weak, alias("volatile_memcpy")));
+
+#else
+#include <string.h>
+static inline void* isn_memcpy(volatile void* dst, volatile const void *src, size_t size) { return memcpy( (void *)dst, (const void *)src, size ); }
+#endif
+
+
 /**\} */
 
 /* Helpers */
-#ifdef ARRAY_SIZE
-# error "ARRAY_SIZE already defined"
+
+#if !defined(__atomic_memflush)
+# define __atomic_memflush()    __DMB()     ///< Ensures that all memory is flushed before next memory access
 #endif
-#define ARRAY_SIZE(x)   (sizeof (x) / sizeof (*x))
-#define LAMBDA(c_)      ({ c_ _;})
+#if !defined(__atomic_memsync)
+# define __atomic_memsync()     __DSB()     ///< Ensures that all memory is flushed before next instruction is executed
+#endif
+#if !defined(__atomic_isync)
+# define __atomic_isync()       __ISB()     ///< Flushes pipeline and ensures all previous instructions are completed
+#endif
+
+#ifndef ARRAY_SIZE
+# define ARRAY_SIZE(x)   (sizeof (x) / sizeof (*x))
+#endif
+
+#ifndef WITHIN
+# define WITHIN(x, a, b)     ((x) >= (a) && (x) <= (b))
+#endif
+
+#ifndef LAMBDA
+# define LAMBDA(c_)      ({ c_ _;})
+#endif
 
 #if !defined(assert2)
 #  define assert2(x)    (void)(x)
@@ -354,6 +414,13 @@ typedef void* (* isn_events_handler_t)(const void* arg);
 #else
 # define UNUSED(x) x
 #endif
+#endif
+
+#ifndef CASSERT
+#  define CASSERT(predicate, file) _impl_CASSERT_LINE(predicate,__LINE__,file)
+#  define _impl_PASTE(a,b) a##b
+#  define _impl_CASSERT_LINE(predicate, line, file) \
+    typedef char _impl_PASTE(assertion_failed_##file##_,line)[2*!!(predicate)-1];
 #endif
 
 #ifndef __STRINGIFY0

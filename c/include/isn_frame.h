@@ -1,38 +1,38 @@
 /** \file
- *  \brief ISN Short and Compact (with CRC) Frame Protocol up to 64 B frames
+ *  \brief ISN Short and Compact (with 8-bit CRC) Frame Protocol up to 64 B frames
  *  \author Uros Platise <uros@isotel.org>
  *  \see https://www.isotel.org/isn/frame.html
  */
 /**
  * \ingroup GR_ISN
  * \defgroup GR_ISN_Frame Frame Layer Driver
- * 
+ *
  * # Scope
- * 
+ *
  * Implements Device side of the [ISN Frame Layer Protocol](https://www.isotel.org/isn/frame.html)
  * which encapsulated ordered data into a streams, and decapsulates data from the unordered streams.
  * It is a single byte overhead protocol and may pack from 1 to 64 bytes with optional 8-bit CRC
  * appended at the end.
- * 
+ *
  * # Concept
- * 
+ *
  * Streaming (unordered) devices such as are \ref GR_ISN_PSoC_UART, \ref GR_ISN_PSoC_USBUART, \ref GR_ISN_User,
  * and others, do not provide sufficient framing information to denote where are the start and end
  * of the data within some packet.
  * This is necessary in order to be able to post-process the received information by other protocols.
- * 
+ *
  * This frame objects pre-appends data with a frame start pre-amble
  * that also consists of payload length in a single byte and comes in two modes:
- * 
+ *
  * - `ISN_FRAME_MODE_SHORT` (1-byte overhead),
  * - `ISN_FRAME_MODE_COMPACT` which appends CRC at the end (2-bytes overhead)
- * 
+ *
  * An example of usage:
  * ~~~
  * const void * terminal_recv(isn_layer_t *drv, const void *src, size_t size, isn_driver_t *caller) {
  *     void *obuf = NULL;
  *     const uint8_t *buf = src;
- * 
+ *
  *     if (size==1 && *buf==ISN_PROTO_PING) {
  *         isn_msg_send(&isn_message, 1, ISN_MSG_PRI_NORMAL);
  *     }
@@ -48,7 +48,7 @@
  *     }
  *     return buf;
  * }
- * 
+ *
  * isn_frame_init(&isn_frame, ISN_FRAME_MODE_COMPACT, &isn_dispatch, &(isn_receiver_t){terminal_recv}, &isn_usbuart, &counter_1kHz, 100);
  * isn_usbuart_init(&isn_usbuart, USBUART_3V_OPERATION, &isn_frame);
  * ~~~
@@ -60,52 +60,53 @@
  *     - Otherwise it treats incoming data as terminal I/O; in this example it simply echos it back to the `caller`
  *   - FRAME layer requires a free running counter variable to detect timeouts, which period is defined in LSB counts of that same
  *     variable; so for an 1 kHz free running counter, the timeout in above case is 100 ms.
- * 
+ *
  * # Receiver
- * 
+ *
  * As a receiver it may accept two kind of data:
- * 
+ *
  * 1. Terminal data in range from 0..127, and
  * 2. Framed data starting with a header which value is always >= 0x80
- * 
+ *
  * ## Terminal data
- * 
+ *
  * As long frame does not detect a frame preamble byte (>=0x80) it operates in terminal mode.
  * All the data received are passed over to the `other` child. The device may use this receiver
  * to support a standard terminal I/O mode, as well as to detect a Ping signal, see \ref GR_ISN.
- * 
+ *
  * ## Framed Data
- * 
+ *
  * In this case it waits for a valid pre-amble identifier, when detected it starts collecting received data.
  * If CRC is enabled, it must end with a proper CRC otherwise data is discarded and error counter incremented.
  * To recover from errors this implementation uses a frame timeout principle, which defines the maximum
  * time between two successive recv(), in which case if packet is terminated in-between buffer is flushed
  * and error counter is incremented.
- * 
+ *
  * Advanced techniques as implemented on the host side, like Isotel Precision IDM, walk over the stream
- * to detect header with respective valid crc to resynchronize even in cases where stream is dense and 
+ * to detect header with respective valid crc to resynchronize even in cases where stream is dense and
  * timeout technique would not work.
- * 
+ *
  * The use of CRC, thus `ISN_FRAME_MODE_COMPACT` mode, is suggested on all noisy streams.
  * The use of SHORT protocol is suggested as inner layers on the top of some reliable protocol, like USB.
- * 
- * # Sender
- * 
- * As a sender this object receives ordered data from its child, adds header and optional CRC, and 
+ *
+ * # SenderLong
+ *
+ * As a sender this object receives ordered data from its child, adds header and optional CRC, and
  * sends data to its parent.
  */
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- * 
- * (c) Copyright 2019, Isotel, http://isotel.org
+ *
+ * (c) Copyright 2019 - 2021, Isotel, http://isotel.org
  */
 
 #ifndef __ISN_FRAME_H__
 #define __ISN_FRAME_H__
 
 #include "isn_def.h"
+#include "isn_clock.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -114,6 +115,28 @@ extern "C" {
 /*--------------------------------------------------------------------*/
 /* DEFINITIONS                                                        */
 /*--------------------------------------------------------------------*/
+
+/**
+ * Best known polynom in range up to 512+ bits
+ *
+ *  Koopman hexadecimal representation: A6
+ *  normal presentation: 0x4D
+ *
+ * Performs as:
+ *  - HD=2, 2048+ bits
+ *  - HD=3, <247 bits
+ *  - HD=4, <16 bits
+ *
+ * Reference:
+ *  - Cyclic Redundancy Code (CRC) Polynomial Selection For Embedded Networks
+ *    Philip Koopman, Tridib Chakravarty,
+ *    The International Conference on Dependable Systems and Networks, DSN-2004
+ *    https://users.ece.cmu.edu/~koopman/crc/crc8.html 
+ *
+ *  - Standard Polynomials with their representation,
+ *    https://en.wikipedia.org/wiki/Cyclic_redundancy_check#Polynomial_representations_of_cyclic_redundancy_checks
+ */
+#define ISN_FRAME_CRC8_POLYNOMIAL_NORMAL    ((uint8_t) ((0xA6 << 1) + 1) & 0xff))   ///< Normal presentation
 
 #define ISN_FRAME_MAXSIZE   64      ///< max short/compact frame len
 
@@ -132,12 +155,12 @@ typedef struct {
     isn_driver_t* other;
     isn_driver_t* parent;
     isn_frame_mode_t crc_enabled;
-    volatile const uint32_t *sys_counter;
-    uint32_t frame_timeout;
+    isn_clock_counter_t frame_timeout;
 
     uint8_t state;
     uint8_t crc;
     uint8_t recv_buf[ISN_FRAME_MAXSIZE];
+    uint8_t recv_fwed;
     uint8_t recv_size;
     uint8_t recv_len;
     uint32_t last_ts;
@@ -149,17 +172,26 @@ isn_frame_t;
 /*----------------------------------------------------------------------*/
 
 /** Short and Compact Frame Layer
- * 
+ *
  * \param obj
  * \param mode selects short (without CRC) or compact (with CRC) which is typically used over noisy lines, as UART
  * \param child layer
  * \param other layer to which all the traffic that is outside the frames is redirected, like terminal I/O
  * \param parent protocol layer, which is typically a PHY, or UART or USBUART, ..
- * \param counter a pointer to a free running counter at arbitrary frequency
- * \param timeout defines period with reference to the counter after which reception is treated as invalid and to be discarded
- *        A 100 ms is a good choice.
+ * \param timeout defines period with reference to the isn counter after which reception is treated as invalid and to be discarded.
  */
-void isn_frame_init(isn_frame_t *obj, isn_frame_mode_t mode, isn_layer_t* child, isn_layer_t* other, isn_layer_t* parent, volatile const uint32_t *counter, uint32_t timeout);
+void isn_frame_init(isn_frame_t *obj, isn_frame_mode_t mode, isn_layer_t* child, isn_layer_t* other, isn_layer_t* parent, isn_clock_counter_t timeout);
+
+/** Creates an instance of a Short and Compact Frame Layer
+ *  Instance is allocated with malloc and can be freed with isn_frame_drop()
+ *
+ * \returns object instance
+ */
+isn_frame_t* isn_frame_create();
+
+/** Drops a valid instance created by isn_frame_create()
+ */
+void isn_frame_drop(isn_frame_t *obj);
 
 #ifdef __cplusplus
 }

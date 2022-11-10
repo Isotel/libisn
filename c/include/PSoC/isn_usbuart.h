@@ -2,24 +2,24 @@
  *  \brief ISN USBUART Driver for PSoC4 and PSoC5
  *  \author Uros Platise <uros@isotel.org>
  *  \see isn_usbuart.c
- * 
+ *
  * \defgroup GR_ISN_PSoC_USBUART PSoC USBUART Driver
- * 
+ *
  * # Scope
- * 
+ *
  * Tiny implementation of the ISN Device Driver for the Cypress PSoC4, PSoC5 USBUART.
- * 
+ *
  * # Usage
- * 
+ *
  * Place USBUART component in the PSoC Creator 4.2 and name it USBUART.
- * 
+ *
  * ~~~
  * isn_dispatch_t isn_dispatch;
  * isn_frame_t isn_frame;
  * isn_usbuart_t isn_usbuart;
- * 
+ *
  * isn_frame_init(&isn_frame, ISN_FRAME_MODE_COMPACT, &isn_dispatch, &(isn_receiver_t){terminal_recv}, &isn_usbuart, &counter_1kHz, 100);
- * 
+ *
  * CyGlobalIntEnable;
  * isn_usbuart_init(&isn_usbuart, USBUART_3V_OPERATION, &isn_frame);
  * ~~~
@@ -28,7 +28,7 @@
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- * 
+ *
  * (c) Copyright 2019, Isotel, http://isotel.org
  */
 
@@ -38,8 +38,8 @@
 
 #include "isn_def.h"
 
-#define TXBUF_SIZE  64
-#define RXBUF_SIZE  64
+#define USBUART_TXBUF_SIZE  64
+#define USBUART_RXBUF_SIZE  64
 
 /** ISN Layer Driver */
 typedef struct {
@@ -48,8 +48,8 @@ typedef struct {
 
     /* Private data */
     isn_driver_t* child_driver;
-    uint8_t txbuf[TXBUF_SIZE];
-    uint8_t rxbuf[RXBUF_SIZE];
+    uint8_t txbuf[USBUART_TXBUF_SIZE];
+    uint8_t rxbuf[USBUART_RXBUF_SIZE];
     int buf_locked;
     size_t rx_size;
 }
@@ -59,17 +59,27 @@ isn_usbuart_t;
 /* Public functions                                                     */
 /*----------------------------------------------------------------------*/
 
-/** Polls for a new data received from PC and dispatch them 
+/** Polls for a new data received from PC and dispatch them
  * \returns number of bytes received
  */
 size_t isn_usbuart_poll(isn_usbuart_t *obj);
 
 /** Initialize
- * 
+ *
  * \param obj
  * \param mode USBUART_3V_OPERATION
  * \param child use the next layer, like isn_frame
  */
 void isn_usbuart_init(isn_usbuart_t *obj, int mode, isn_layer_t* child);
+
+/** Start USB Connection
+ *
+ * \param wait_ms defines time to wait >0 for a blocking call, 0 for non-blocking, or CY_USB_DEV_WAIT_FOREVER
+ * \returns Non-zero when connection is established, otherwise 0
+ */
+int isn_usbuart_start(int wait_ms);
+
+/** Stop USB Connection */
+int isn_usbuart_stop();
 
 #endif
