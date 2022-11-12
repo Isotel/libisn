@@ -109,7 +109,7 @@ static int isn_msg_sendnext(isn_message_t *obj) {
             // a message without args cannot be sent as args, but only desc (first if)
             else if (picked->size == 0) {
                 picked->priority = ISN_MSG_PRI_CLEAR;
-                obj->tx_dropped++;
+                obj->drv.stats.tx_dropped++;
             }
     #endif
             // Note that the message we're asking for is just arriving, and for messages without
