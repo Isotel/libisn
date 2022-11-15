@@ -174,6 +174,7 @@ void isn_msg_post(isn_message_t *obj, uint8_t message_id, uint8_t priority) {
     // Ignore out-of-table requests; \todo we need to add query for LAST
     if (message_id >= obj->isn_msg_table_size) return;
 
+    uint8_t priority_old = obj->isn_msg_table[message_id].priority;
     uint8_t s = CyEnterCriticalSection();
     if (priority == ISN_MSG_PRI_CLEAR) {
         obj->isn_msg_table[message_id].priority = priority;
@@ -184,6 +185,10 @@ void isn_msg_post(isn_message_t *obj, uint8_t message_id, uint8_t priority) {
         emit(obj);
     }
     CyExitCriticalSection(s);
+
+    if (priority_old != obj->isn_msg_table[message_id].priority && obj->dup && priority <= ISN_MSG_PRI_HIGHEST) {
+        isn_msg_post(obj->dup, message_id, priority);
+    }
 }
 
 void isn_msg_send(isn_message_t *obj, uint8_t message_id, uint8_t priority) {
@@ -359,6 +364,7 @@ void isn_msg_init(isn_message_t *obj, isn_msg_table_t* messages, uint8_t size, i
     obj->msgnum = 0;
     obj->resend_timer = 0;
     obj->queue = NULL;  // By default reactor is not enabled and priority queue is to be set by user
+    obj->dup = NULL;
     isn_msg_self = obj;
     sanity_check(obj);
 }
