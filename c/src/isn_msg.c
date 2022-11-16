@@ -66,8 +66,8 @@ static int isn_msg_sendnext(isn_message_t *obj) {
             obj->active++;
 
             // If it is locked in a query wait state then we want to unlock it (proceed) only if data is provided
-            // Even if locked, keep through other messages to free input recive buffer
-            if ( (obj->isn_msg_table[obj->msgnum].priority != ISN_MSG_PRI_QUERY_WAIT && !obj->lock) ||
+            // Even if locked, keep through other messages to free input receive buffer
+            if ( (obj->isn_msg_table[obj->msgnum].priority != __ISN_MSG_PRI_QUERY_WAIT && !obj->lock) ||
                      obj->msgnum == obj->isn_msg_received_msgnum) {
                 picked = &obj->isn_msg_table[obj->msgnum];
                 break;
@@ -116,8 +116,8 @@ static int isn_msg_sendnext(isn_message_t *obj) {
             // any handler, we reply back with query, but we do not block the message.
             else if (picked->handler == NULL || (picked->priority == ISN_MSG_PRI_QUERY_ARGS && obj->msgnum != obj->isn_msg_received_msgnum)) {
                 send_packet(obj, obj->msgnum, NULL, 0);
-                picked->priority = picked->handler ? ISN_MSG_PRI_QUERY_WAIT : ISN_MSG_PRI_CLEAR;
-                if (picked->priority == ISN_MSG_PRI_QUERY_WAIT) obj->resend_timer = 0;
+                picked->priority = picked->handler ? __ISN_MSG_PRI_QUERY_WAIT : ISN_MSG_PRI_CLEAR;
+                if (picked->priority == __ISN_MSG_PRI_QUERY_WAIT) obj->resend_timer = 0;
             }
             else {
                 obj->handler_priority = picked->priority;
@@ -140,7 +140,7 @@ static int isn_msg_sendnext(isn_message_t *obj) {
                     }
                     // Do not reply back if request for data was done from our side, to avoid ping-ponging
                     // Handle also the case of just-arriving QUERY_ARGS message whch is not yet in _WAIT state.
-                    if (obj->handler_priority != ISN_MSG_PRI_QUERY_WAIT && obj->handler_priority != ISN_MSG_PRI_QUERY_ARGS) {
+                    if (obj->handler_priority != __ISN_MSG_PRI_QUERY_WAIT && obj->handler_priority != ISN_MSG_PRI_QUERY_ARGS) {
                         send_packet(obj, obj->msgnum, data, picked->size);
                     }
                 }
@@ -215,7 +215,7 @@ uint8_t isn_msg_resend_queries(isn_message_t *obj, uint32_t timeout) {
         }
         /* Check all messages with QUERY_WAIT as well as UPDATE_ARGS to schedule retries */
         for (uint8_t msgnum = 0; msgnum < obj->isn_msg_table_size; msgnum++) {
-            if (obj->isn_msg_table[msgnum].priority == ISN_MSG_PRI_QUERY_WAIT) {
+            if (obj->isn_msg_table[msgnum].priority == __ISN_MSG_PRI_QUERY_WAIT) {
                 obj->isn_msg_table[msgnum].priority = ISN_MSG_PRI_QUERY_ARGS;
                 count++;
                 obj->drv.stats.tx_retries++;

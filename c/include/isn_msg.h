@@ -287,7 +287,7 @@ extern "C" {
 #define ISN_MSG_PRI_DESCRIPTIONLOW  30      ///< Lower priority description, used in fast loading
 //#define ISN_MSG_PRI_QUERY_DESC    28      ///< Request for description, NOT SUPPORTED YET
 #define ISN_MSG_PRI_QUERY_ARGS      27      ///< Request for arguments
-#define ISN_MSG_PRI_QUERY_WAIT      26      ///< Wait for reply, internal intermediate state do NOT USE
+#define __ISN_MSG_PRI_QUERY_WAIT    26      ///< Wait for reply, internal intermediate state do NOT USE
 #define ISN_MGG_PRI_UPDATE_ARGS     25      ///< Send an update and block further transmission
 #define ISN_MSG_PRI_HIGHEST         0x0f    ///< When other peer requests args, these are send with this priority
 #define ISN_MSG_PRI_HIGH            0x08
@@ -514,7 +514,7 @@ static inline int isn_msg_isquery(isn_message_t *obj) {return obj->handler_prior
  *          in-time received message (clears ISN_MSG_PRI_QUERY_ARGS)
  */
 static inline int isn_msg_isreply(isn_message_t *obj) {
-    return obj->handler_priority == ISN_MSG_PRI_QUERY_WAIT || obj->handler_priority == ISN_MSG_PRI_QUERY_ARGS;
+    return obj->handler_priority == __ISN_MSG_PRI_QUERY_WAIT || obj->handler_priority == ISN_MSG_PRI_QUERY_ARGS;
 }
 
 #ifdef __cplusplus
