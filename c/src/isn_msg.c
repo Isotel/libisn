@@ -18,7 +18,6 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include "assert.h"
 #include "isn_msg.h"
 
 isn_message_t *isn_msg_self;
@@ -50,7 +49,6 @@ static int send_packet(isn_message_t *obj, uint8_t msgflags, const void* data, i
         obj->parent_driver->free(obj->parent_driver, dest);
     }
     obj->drv.stats.tx_dropped++;
-    //obj->parent_driver->free(obj->parent_driver, dest);   // we're ok to free NULL to simplify code
     return 0;
 }
 
@@ -223,9 +221,13 @@ uint8_t isn_msg_resend_queries(isn_message_t *obj, uint32_t timeout) {
             /* Theoretically this is not needed, however it is an additional protection to
                account this type of pending messages and to increase count and trigger
                pending state, which could be missed if lock was already 0 */
-            if (obj->isn_msg_table[msgnum].priority == ISN_MGG_PRI_UPDATE_ARGS) {
+            else if (obj->isn_msg_table[msgnum].priority == ISN_MGG_PRI_UPDATE_ARGS) {
                 count++;
                 obj->drv.stats.tx_retries++;
+            }
+            /* Theoretically this should not be needed but fixes stalled state machine */
+            else if (obj->isn_msg_table[msgnum].priority) {
+                count++;
             }
         }
     }
@@ -293,7 +295,7 @@ static size_t isn_message_recv(isn_layer_t *drv, const void *src, size_t size, i
      */
     if (obj->isn_msg_table[msgnum].priority != ISN_MGG_PRI_UPDATE_ARGS ) {
         if (data_size > 0) {
-            assert(data_size <= RECV_MESSAGE_SIZE);
+            ASSERT(data_size <= RECV_MESSAGE_SIZE);
             isn_memcpy(obj->message_buffer, buf+2, data_size);   // copy recv data into a receive buffer to be handled by sched
             obj->isn_msg_received_data = obj->message_buffer;
             obj->isn_msg_received_msgnum = msgnum;
@@ -305,16 +307,17 @@ static size_t isn_message_recv(isn_layer_t *drv, const void *src, size_t size, i
         obj->lock = 0;
         emit(obj);  // message is pending, and releasing the lock requires retriggering of sched
     }
+    else emit(obj); // retrigger the sched (TEST)
+
     obj->msgnum = msgnum;   // speed-up response time to all incoming request and to release incoming buffer
     obj->drv.stats.rx_packets++;
     obj->drv.stats.rx_counter += data_size;
     return size;
 }
 
-
 int isn_msg_sched(isn_message_t *obj) {
     if (obj->pending) {
-        if (obj->parent_driver->getsendbuf(obj->parent_driver, NULL, 1, (isn_layer_t *)obj) > 0) {    // Test if we have at least 1 byte space to send?
+        if (obj->parent_driver->getsendbuf(obj->parent_driver, NULL, 2, (isn_layer_t *)obj) > 0) {    // Test if we have at least space for 2 bytes to send?
             obj->pending = isn_msg_sendnext(obj);
         }
     }
