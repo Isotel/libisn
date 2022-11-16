@@ -18,7 +18,6 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include "assert.h"
 #include "isn_msg.h"
 
 isn_message_t *isn_msg_self;
@@ -50,7 +49,6 @@ static int send_packet(isn_message_t *obj, uint8_t msgflags, const void* data, i
         obj->parent_driver->free(obj->parent_driver, dest);
     }
     obj->drv.stats.tx_dropped++;
-    //obj->parent_driver->free(obj->parent_driver, dest);   // we're ok to free NULL to simplify code
     return 0;
 }
 
@@ -66,8 +64,8 @@ static int isn_msg_sendnext(isn_message_t *obj) {
             obj->active++;
 
             // If it is locked in a query wait state then we want to unlock it (proceed) only if data is provided
-            // Even if locked, keep through other messages to free input recive buffer
-            if ( (obj->isn_msg_table[obj->msgnum].priority != ISN_MSG_PRI_QUERY_WAIT && !obj->lock) ||
+            // Even if locked, keep through other messages to free input receive buffer
+            if ( (obj->isn_msg_table[obj->msgnum].priority != __ISN_MSG_PRI_QUERY_WAIT && !obj->lock) ||
                      obj->msgnum == obj->isn_msg_received_msgnum) {
                 picked = &obj->isn_msg_table[obj->msgnum];
                 break;
@@ -116,8 +114,8 @@ static int isn_msg_sendnext(isn_message_t *obj) {
             // any handler, we reply back with query, but we do not block the message.
             else if (picked->handler == NULL || (picked->priority == ISN_MSG_PRI_QUERY_ARGS && obj->msgnum != obj->isn_msg_received_msgnum)) {
                 send_packet(obj, obj->msgnum, NULL, 0);
-                picked->priority = picked->handler ? ISN_MSG_PRI_QUERY_WAIT : ISN_MSG_PRI_CLEAR;
-                if (picked->priority == ISN_MSG_PRI_QUERY_WAIT) obj->resend_timer = 0;
+                picked->priority = picked->handler ? __ISN_MSG_PRI_QUERY_WAIT : ISN_MSG_PRI_CLEAR;
+                if (picked->priority == __ISN_MSG_PRI_QUERY_WAIT) obj->resend_timer = 0;
             }
             else {
                 obj->handler_priority = picked->priority;
@@ -140,7 +138,7 @@ static int isn_msg_sendnext(isn_message_t *obj) {
                     }
                     // Do not reply back if request for data was done from our side, to avoid ping-ponging
                     // Handle also the case of just-arriving QUERY_ARGS message whch is not yet in _WAIT state.
-                    if (obj->handler_priority != ISN_MSG_PRI_QUERY_WAIT && obj->handler_priority != ISN_MSG_PRI_QUERY_ARGS) {
+                    if (obj->handler_priority != __ISN_MSG_PRI_QUERY_WAIT && obj->handler_priority != ISN_MSG_PRI_QUERY_ARGS) {
                         send_packet(obj, obj->msgnum, data, picked->size);
                     }
                 }
@@ -218,7 +216,7 @@ uint8_t isn_msg_resend_queries(isn_message_t *obj, uint32_t timeout) {
         }
         /* Check all messages with QUERY_WAIT as well as UPDATE_ARGS to schedule retries */
         for (uint8_t msgnum = 0; msgnum < obj->isn_msg_table_size; msgnum++) {
-            if (obj->isn_msg_table[msgnum].priority == ISN_MSG_PRI_QUERY_WAIT) {
+            if (obj->isn_msg_table[msgnum].priority == __ISN_MSG_PRI_QUERY_WAIT) {
                 obj->isn_msg_table[msgnum].priority = ISN_MSG_PRI_QUERY_ARGS;
                 count++;
                 obj->drv.stats.tx_retries++;
@@ -226,9 +224,13 @@ uint8_t isn_msg_resend_queries(isn_message_t *obj, uint32_t timeout) {
             /* Theoretically this is not needed, however it is an additional protection to
                account this type of pending messages and to increase count and trigger
                pending state, which could be missed if lock was already 0 */
-            if (obj->isn_msg_table[msgnum].priority == ISN_MGG_PRI_UPDATE_ARGS) {
+            else if (obj->isn_msg_table[msgnum].priority == ISN_MGG_PRI_UPDATE_ARGS) {
                 count++;
                 obj->drv.stats.tx_retries++;
+            }
+            /* Theoretically this should not be needed but fixes stalled state machine */
+            else if (obj->isn_msg_table[msgnum].priority) {
+                count++;
             }
         }
     }
@@ -296,7 +298,7 @@ static size_t isn_message_recv(isn_layer_t *drv, const void *src, size_t size, i
      */
     if (obj->isn_msg_table[msgnum].priority != ISN_MGG_PRI_UPDATE_ARGS ) {
         if (data_size > 0) {
-            assert(data_size <= RECV_MESSAGE_SIZE);
+            ASSERT(data_size <= RECV_MESSAGE_SIZE);
             isn_memcpy(obj->message_buffer, buf+2, data_size);   // copy recv data into a receive buffer to be handled by sched
             obj->isn_msg_received_data = obj->message_buffer;
             obj->isn_msg_received_msgnum = msgnum;
@@ -308,16 +310,17 @@ static size_t isn_message_recv(isn_layer_t *drv, const void *src, size_t size, i
         obj->lock = 0;
         emit(obj);  // message is pending, and releasing the lock requires retriggering of sched
     }
+    else emit(obj); // retrigger the sched (TEST)
+
     obj->msgnum = msgnum;   // speed-up response time to all incoming request and to release incoming buffer
     obj->drv.stats.rx_packets++;
     obj->drv.stats.rx_counter += data_size;
     return size;
 }
 
-
 int isn_msg_sched(isn_message_t *obj) {
     if (obj->pending) {
-        if (obj->parent_driver->getsendbuf(obj->parent_driver, NULL, 1, (isn_layer_t *)obj) > 0) {    // Test if we have at least 1 byte space to send?
+        if (obj->parent_driver->getsendbuf(obj->parent_driver, NULL, 2, (isn_layer_t *)obj) > 0) {    // Test if we have at least space for 2 bytes to send?
             obj->pending = isn_msg_sendnext(obj);
         }
     }
