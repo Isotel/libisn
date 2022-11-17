@@ -97,7 +97,7 @@ static isn_layer_t * inep_reservation[7] = {NULL, NULL, NULL, NULL, NULL, NULL, 
 
 
 static void *usb_detect_event(void *arg) {
-    static uint8_t debouncer;
+    static int8_t debouncer = 0;
 
     if ( !USBFS_VBusPresent() ) usb_state = USB_IDLE;
 
@@ -122,6 +122,9 @@ static void *usb_detect_event(void *arg) {
                     USBFS_Start(0u, USBFS_DWR_POWER_OPERATION);
                     CyIntSetPriority(USBFS_ARB_VECT_NUM, 5);    // CUSTOM_USBFS_ARB_PRIORITY
                 }
+            }
+            else {
+                if (debouncer-- < 1) usb_state = USB_IDLE;
             }
             break;
 
