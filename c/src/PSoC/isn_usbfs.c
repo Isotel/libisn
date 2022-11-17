@@ -1,6 +1,6 @@
 /** \file
  *  \brief ISN USBFS Bulk USB Driver for PSoC4 and PSoC5 Implementation
- *  \author Uros Platise <uros@isotel.org>
+ *  \author Uros Platise <uros@isotel.org>, Tomaz Kanalec <tomaz@isotel.org>
  *  \see isn_usbfs.h
  */
 /**
@@ -27,14 +27,22 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
- * (c) Copyright 2019 - 2021, Isotel, http://isotel.eu
+ * (c) Copyright 2019 - 2022, Isotel, http://isotel.eu
  */
 
 #include <string.h>
 #include "project.h"
+#include "isn_reactor.h"
 #include "PSoC/isn_usbfs.h"
 
 /**\{ */
+
+#define USB_IDLE            0
+#define USB_DETECTED        1
+#define USB_CONNECT         2
+#define USB_CONNECTED       3
+
+static uint8_t usb_state = USB_IDLE;
 
 /**
  * NB! PSOC Creator ignore custom setting of the USBFS ARB PRIORITY interrupt
@@ -86,6 +94,53 @@ static uint8_t USB_SEND_EPend = USB_SEND_EPst + 6;
 /** INEP could be assigned to specific user layer to guarantee buf availability and
  *  same EP number through out continuous tranfers */
 static isn_layer_t * inep_reservation[7] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+
+
+static void *usb_detect_event(void *arg) {
+    static uint8_t debouncer;
+
+    if ( !USBFS_VBusPresent() ) usb_state = USB_IDLE;
+
+    switch (usb_state) {
+        default:
+        case USB_IDLE:
+            if ( USBFS_initVar ) {
+                USBFS_Stop();
+                isn_usbfs_state_cb(usb_state);
+            }
+
+            if ( USBFS_VBusPresent() ) {
+                usb_state =  USB_DETECTED;
+                debouncer = 0;
+            }
+            break;
+
+        case USB_DETECTED:
+            if ( USBFS_VBusPresent() ) {
+                if (debouncer++ > 2) {
+                    usb_state = USB_CONNECT;
+                    USBFS_Start(0u, USBFS_DWR_POWER_OPERATION);
+                    CyIntSetPriority(USBFS_ARB_VECT_NUM, 5);    // CUSTOM_USBFS_ARB_PRIORITY
+                }
+            }
+            break;
+
+        case USB_CONNECT:
+            if ( USBFS_GetConfiguration() ) {
+                USBFS_EnableOutEP(1);    // USB_RECV_EP
+                usb_state = USB_CONNECTED;
+                isn_usbfs_state_cb(usb_state);
+            }
+            break;
+
+        case USB_CONNECTED:
+            break;
+    }
+
+    isn_reactor_change_timed_self( ISN_REACTOR_REPEAT_ms(100) );
+    return &usb_detect_event;
+}
+
 
 /**
  * Allocate buffer if buf is given, or just query for availability if buf is NULL
@@ -144,6 +199,8 @@ static int isn_usbfs_send(isn_layer_t *drv, void *dest, size_t size) {
  * in the case it is unsuccessful it retries the next time.
  */
 size_t isn_usbfs_poll(isn_usbfs_t *obj) {
+    if (usb_state != USB_CONNECTED) return 0;
+
     if (obj->rx_size == 0) {
         if (USBFS_GetEPState(USB_RECV_EP) == USBFS_OUT_BUFFER_FULL) {
             USBFS_ReadOutEP(USB_RECV_EP, (uint8_t*)obj->rxbuf, obj->rx_size = USBFS_GetEPCount(USB_RECV_EP));
@@ -159,7 +216,7 @@ size_t isn_usbfs_poll(isn_usbfs_t *obj) {
             obj->drv.stats.rx_retries++;
         }
         else {
-            // USBFS is a packet oriented transfer, for which we require the receiver to 
+            // USBFS is a packet oriented transfer, for which we require the receiver to
             // accept it all, or the rest is considered as dropped
             // \todo If the next layer is frame it could handle partial processing
             //obj->drv.stats.rx_retries++;
@@ -172,7 +229,7 @@ size_t isn_usbfs_poll(isn_usbfs_t *obj) {
     return obj->rx_size;
 }
 
-void isn_usbfs_init(isn_usbfs_t *obj, int mode, isn_layer_t* child) {
+uint8_t isn_usbfs_init(isn_usbfs_t *obj, int mode, isn_layer_t* child) {
     ASSERT(obj);
     ASSERT(child);
     memset(&obj->drv, 0, sizeof(obj->drv));
@@ -185,10 +242,23 @@ void isn_usbfs_init(isn_usbfs_t *obj, int mode, isn_layer_t* child) {
     obj->rx_size    = 0;
     obj->next_send_ep = USB_SEND_EPst; /** first free EP */
 
+    usb_state = USB_IDLE;
+
+#if (USBFS_VBUS_MONITORING_ENABLE)
+    isn_reactor_queue(usb_detect_event, NULL);
+#else
     USBFS_Start(0u, mode);
     CyIntSetPriority(USBFS_ARB_VECT_NUM, CUSTOM_USBFS_ARB_PRIORITY);
-    while (0u == USBFS_GetConfiguration()) {}
-    USBFS_EnableOutEP(USB_RECV_EP);
+    for (uint8_t i=0; i<100; i++) {
+        if (USBFS_GetConfiguration()) {
+            usb_state = USB_CONNECTED;
+            USBFS_EnableOutEP(USB_RECV_EP);
+            break;
+        }
+        CyDelay(10);
+    }
+#endif
+    return usb_state;
 }
 
 void isn_usbfs_set_maxinbufs(uint8_t count) {
