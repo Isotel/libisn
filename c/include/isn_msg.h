@@ -287,7 +287,7 @@ extern "C" {
 #define ISN_MSG_PRI_DESCRIPTIONLOW  30      ///< Lower priority description, used in fast loading
 //#define ISN_MSG_PRI_QUERY_DESC    28      ///< Request for description, NOT SUPPORTED YET
 #define ISN_MSG_PRI_QUERY_ARGS      27      ///< Request for arguments
-#define ISN_MSG_PRI_QUERY_WAIT      26      ///< Wait for reply, internal intermediate state do NOT USE
+#define __ISN_MSG_PRI_QUERY_WAIT    26      ///< Wait for reply, internal intermediate state do NOT USE
 #define ISN_MGG_PRI_UPDATE_ARGS     25      ///< Send an update and block further transmission
 #define ISN_MSG_PRI_HIGHEST         0x0f    ///< When other peer requests args, these are send with this priority
 #define ISN_MSG_PRI_HIGH            0x08
@@ -314,7 +314,7 @@ extern uint8_t handler_priority;
 /** Internal struct, note the alignment of the message_buffer, which should be aligned to (4)
  *  More info on align: https://stackoverflow.com/questions/4306186/structure-padding-and-packing
  */
-typedef struct {
+typedef struct isn_message_s {
     /* ISN Abstract Class Driver */
     isn_driver_t drv;
 
@@ -333,6 +333,8 @@ typedef struct {
     uint8_t msgnum;                             ///< Last msgnum sent
     uint8_t lock;                               ///< Lock, to prevent sending further messages, when waiting for ack (reply)
     uint32_t resend_timer;
+
+    struct isn_message_s *dup;                  ///< Duplicate updates to another message layer (i.e. for tracing or cross-updating)
 
     isn_reactor_queue_t queue;                  ///< Reactor queue
     isn_reactor_mutex_t busy_mutex;             ///< Controlled by msg layer when busy
@@ -367,6 +369,13 @@ void isn_msg_init(isn_message_t *obj, isn_msg_table_t* messages, uint8_t size, i
  * \param holdon_mutex controlled by parent layers to get ready before message layer can push new messages
  */
 void isn_msg_radiate(isn_message_t *obj, isn_reactor_queue_t priority_queue, isn_reactor_mutex_t busy_mutex, isn_reactor_mutex_t holdon_mutex);
+
+/** Duplicate message updates
+ * 
+ * \param obj
+ * \param dup message layer to which requests are duplicated for all priority <= ISN_MSG_PRI_HIGHEST
+ */
+static inline void isn_msg_dup(isn_message_t *obj, isn_message_t *dup) {obj->dup = dup;};
 
 /** Schedule received callbacks and send those marked by isn_msg_send() or isn_msg_sendby()
  *
@@ -505,7 +514,7 @@ static inline int isn_msg_isquery(isn_message_t *obj) {return obj->handler_prior
  *          in-time received message (clears ISN_MSG_PRI_QUERY_ARGS)
  */
 static inline int isn_msg_isreply(isn_message_t *obj) {
-    return obj->handler_priority == ISN_MSG_PRI_QUERY_WAIT || obj->handler_priority == ISN_MSG_PRI_QUERY_ARGS;
+    return obj->handler_priority == __ISN_MSG_PRI_QUERY_WAIT || obj->handler_priority == ISN_MSG_PRI_QUERY_ARGS;
 }
 
 #ifdef __cplusplus
