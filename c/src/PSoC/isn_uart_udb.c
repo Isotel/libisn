@@ -35,6 +35,15 @@
  * The transmit buffer will under all conditions always, when data
  * are sent, provide a buffer of at least 128 B, an important condition
  * which eliminates the need for fragmentation.
+ *
+ * \section Support for fixed configuration 8E1 UDB implementation
+ *
+ * Recently support was added for resource limited fixed configuration
+ * implementation of UART 8E1 with 4-B Rx and Tx buffers.
+ * Implementation uses 7-bit down-counters to represent current
+ * state of the buffers, and uses rising edge tx interrupt to
+ * avoid re-triggering and simplifies code, and level rx interrupt
+ * to be sure all rx bytes have been read.
  */
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -72,6 +81,38 @@ static isn_clock_counter_t delay;
 static size_t recv_thr = 1;
 static isn_uart_t *this;
 
+#if defined(UART_RX8E1_DESERIALIZER_F0_REG)
+
+#define UART_RX8E1_COUNT_MASK   0x7F
+static uint8_t uart_rx8e1_count;    ///< reflects the last/old state of the rx down-counter register
+
+#define UART_TX8E1_COUNT_MASK   0x7F
+static uint8_t uart_tx8e1_count;    ///< reflects the last/old state of the rx down-counter register
+
+#define UART_RXDATA_REG     UART_RX8E1_DESERIALIZER_F0_REG
+#define UART_TXDATA_REG     UART_TX8E1_SERIALIZER_F0_REG
+
+/**
+ * First reset the count
+ * and then clear the buffer, as if counter counted one more
+ * isr will try to fetch it, but if it misses one it will never
+ * clear an interrupt; important if interrupt is rising edge
+ * sensitive; as level sensitive may have issues due to
+ * clearing -> verify on scope
+ */
+void UART_Start() {
+    UART_RX8E1_TIMER_Start();
+    UART_RX8E1_COUNT_Stop();
+    UART_TX8E1_COUNT_Stop();
+    UART_RX8E1_COUNT_COUNT_REG = uart_rx8e1_count = 0;
+    UART_TX8E1_COUNT_COUNT_REG = uart_tx8e1_count = 0;
+    UART_RX8E1_COUNT_Start();
+    UART_TX8E1_COUNT_Start();
+    UART_RX8E1_DESERIALIZER_F0_CLEAR;
+}
+
+#endif
+
 /**\{ */
 
 /** Called when sufficient bytes are stored in the fifo buffer. If not all are handled,
@@ -100,12 +141,17 @@ CY_ISR(rx_isr__) {
 #elif (CYDEV_CHIP_FAMILY_USED == CYDEV_CHIP_FAMILY_PSOC6)
 static void rx_isr__() {
 #endif
+#if !defined(UART_RX8E1_DESERIALIZER_F0_REG)
     uint8_t status;
     while ((status = UART_RXSTATUS_REG) & (UART_RX_STS_FIFO_NOTEMPTY | UART_RX_STS_PAR_ERROR | UART_RX_STS_STOP_ERROR | UART_RX_STS_OVERRUN)) {
         if (status & (UART_RX_STS_PAR_ERROR | UART_RX_STS_STOP_ERROR | UART_RX_STS_OVERRUN)) {
             rxb_err++;
         }
         if (status & UART_RX_STS_FIFO_NOTEMPTY) {
+#else
+        while (uart_rx8e1_count != (UART_RX8E1_COUNT_COUNT_REG & UART_RX8E1_COUNT_MASK)) {
+            uart_rx8e1_count = (uart_rx8e1_count-1) & UART_RX8E1_COUNT_MASK;
+#endif
             uint8_t b = UART_RXDATA_REG;
             uint8_t wri_next = rxb_wri + 1; // & RX_FIFO_MASK, but not needed as it is 8-bit
             if (wri_next != rxb_rdi) {
@@ -116,7 +162,9 @@ static void rx_isr__() {
                 rxb_dropped++;
             }
         }
+#if !defined(UART_RX8E1_DESERIALIZER_F0_REG)
     }
+#endif
 
     ts = isn_clock_now();
     if (queue) {
@@ -142,21 +190,30 @@ static void tx_isr__() {
     // \bug Cypress UDB UART Transmission bug, workaround fix.
     // \note Here is a bug with the UDB block, instead of if () there was while () however
     //       reg status did not reflect the latest state under heavy cpu load, and loop
-    //       inserted (lost) tx bytes. Probably when cpu was heavily loaded more than a 
-    //       single byte was to be pushed. Is it UDB or this particular implementation 
+    //       inserted (lost) tx bytes. Probably when cpu was heavily loaded more than a
+    //       single byte was to be pushed. Is it UDB or this particular implementation
     //       bug not sure.
+#if !defined(UART_TX8E1_SERIALIZER_F0_REG)
     if (UART_TXSTATUS_REG & UART_TX_STS_FIFO_NOT_FULL) {
+#else
+    uint8_t uart_tx8e1_count_limit = ((UART_TX8E1_COUNT_COUNT_REG & UART_TX8E1_COUNT_MASK) - 4) & UART_TX8E1_COUNT_MASK;
+    while (uart_tx8e1_count != uart_tx8e1_count_limit) {
+#endif
         if (txb_rdi != txb_wri) {
             if (txb_rdi == txb_wrw) txb_rdi = 0;
+            uart_tx8e1_count = (uart_tx8e1_count-1) & UART_TX8E1_COUNT_MASK;
             UART_TXDATA_REG = tx_buf[txb_rdi++];
         }
         else {
-#if (CYDEV_CHIP_FAMILY_USED == CYDEV_CHIP_FAMILY_PSOC5)
+#if defined(UART_TX8E1_SERIALIZER_F0_REG)
+            break;    // used to be a while loop, removed due to uart udb bug, and now breaks the for loop
+#else
+# if (CYDEV_CHIP_FAMILY_USED == CYDEV_CHIP_FAMILY_PSOC5)
             IRQ_UART_TX_Disable();
-#elif (CYDEV_CHIP_FAMILY_USED == CYDEV_CHIP_FAMILY_PSOC6)
+# elif (CYDEV_CHIP_FAMILY_USED == CYDEV_CHIP_FAMILY_PSOC6)
             NVIC_DisableIRQ(IRQ_UART_TX_cfg.intrSrc);
+# endif
 #endif
-            //break;    // used to be a while loop, removed due to uart udb bug
         }
     }
 }
@@ -230,9 +287,13 @@ static int isn_uart_send(isn_layer_t *drv, void *dest, size_t size) {
         __atomic_memsync();
 #if (CYDEV_CHIP_FAMILY_USED == CYDEV_CHIP_FAMILY_PSOC5)
         IRQ_UART_TX_SetPending();
+# if !defined(UART_TX8E1_SERIALIZER_F0_REG)
         IRQ_UART_TX_Enable();
+# endif
 #elif (CYDEV_CHIP_FAMILY_USED == CYDEV_CHIP_FAMILY_PSOC6)
+# if !defined(UART_TX8E1_SERIALIZER_F0_REG)
         NVIC_EnableIRQ(IRQ_UART_TX_cfg.intrSrc);
+# endif
         NVIC_SetPendingIRQ(IRQ_UART_TX_cfg.intrSrc);
 #endif
         obj->buf_locked = 0;
@@ -319,6 +380,9 @@ void isn_uart_init(isn_uart_t *obj, isn_layer_t* child) {
     Cy_SysInt_Init(&IRQ_UART_RX_cfg, rx_isr__);
     Cy_SysInt_Init(&IRQ_UART_TX_cfg, tx_isr__);
     NVIC_EnableIRQ(IRQ_UART_RX_cfg.intrSrc);
+# if defined(UART_TX8E1_SERIALIZER_F0_REG)
+    NVIC_EnableIRQ(IRQ_UART_TX_cfg.intrSrc);
+# endif
 #else
 # error "Unsupported platform"
 #endif
