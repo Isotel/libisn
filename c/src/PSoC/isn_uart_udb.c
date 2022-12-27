@@ -201,7 +201,9 @@ static void tx_isr__() {
 #endif
         if (txb_rdi != txb_wri) {
             if (txb_rdi == txb_wrw) txb_rdi = 0;
+#if defined(UART_TX8E1_SERIALIZER_F0_REG)
             uart_tx8e1_count = (uart_tx8e1_count-1) & UART_TX8E1_COUNT_MASK;
+#endif
             UART_TXDATA_REG = tx_buf[txb_rdi++];
         }
         else {
