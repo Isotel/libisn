@@ -96,6 +96,7 @@ static int isn_msg_sendnext(isn_message_t *obj) {
 #endif
                                                                  ) {
                 obj->lock = obj->msgnum;
+                obj->lock_priority = picked->priority;
                 obj->resend_timer = 0;
             }
 
@@ -211,7 +212,7 @@ uint8_t isn_msg_resend_queries(isn_message_t *obj, uint32_t timeout) {
     if (obj->resend_timer > timeout) {
         /* Convert lock into a new pending message */
         if (obj->lock) {
-            obj->isn_msg_table[obj->lock].priority = ISN_MGG_PRI_UPDATE_ARGS;
+            obj->isn_msg_table[obj->lock].priority = obj->lock_priority;
             obj->lock = 0;
         }
         /* Check all messages with QUERY_WAIT as well as UPDATE_ARGS to schedule retries */

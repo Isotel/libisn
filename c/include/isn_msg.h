@@ -332,6 +332,7 @@ typedef struct isn_message_s {
     uint8_t active;                             ///< Number of active messages
     uint8_t msgnum;                             ///< Last msgnum sent
     uint8_t lock;                               ///< Lock, to prevent sending further messages, when waiting for ack (reply)
+    uint8_t lock_priority;
     uint32_t resend_timer;
 
     struct isn_message_s *dup;                  ///< Duplicate updates to another message layer (i.e. for tracing or cross-updating)
