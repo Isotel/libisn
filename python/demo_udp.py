@@ -10,6 +10,9 @@ class UDPDemo:
         self.serial = c_ulonglong(0x1234567890ABCDEF)
         self.counter = c_ulong(0)
         self.msg = None
+        self.serial_cb = self.get_serial_cb()
+        self.counter_cb = self.get_counter_cb()
+        self.ping_cb = self.get_ping_cb()
 
     def get_serial_cb(self):
         return get_cbptr(lambda x: addressof(self.serial))
@@ -34,10 +37,10 @@ class UDPDemo:
 
         self.msg = Message(3)
 
-        self.msg.add("%T0{UDP Example} V1.0 {#sno}={%<Lx}", sizeof(self.serial), self.get_serial_cb())
-        self.msg.add("Example {:counter}={%lu}", sizeof(self.counter), self.get_counter_cb())
+        self.msg.add("%T0{UDP Example} V1.0 {#sno}={%<Lx}", sizeof(self.serial), self.serial_cb)
+        self.msg.add("Example {:counter}={%lu}", sizeof(self.counter), self.counter_cb)
         self.msg.add("%!", 0, None)
-        ping_rcv = Receiver(self.get_ping_cb(), ptr=True)
+        ping_rcv = Receiver(self.ping_cb, ptr=True)
 
         dispatch = Dispatch(2)
         dispatch.add(ISN_PROTO_MSG, self.msg.obj)

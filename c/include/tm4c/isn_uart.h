@@ -29,11 +29,9 @@
 
 #define PSOC_UART_BAUDRATE   115200   // default UART baudrate
 
-#define UART_TXBUF_SIZE  (64)
-#define UART_RXBUF_SIZE  (64)
-
-#define TXBUF_SIZE  (64)
-#define RXBUF_SIZE  (64)
+#define UART_TXBUF_SIZE  (512)
+#define UART_RXBUF_SIZE  (512)
+#define UART_uDMA
 
 /** ISN Layer Driver */
 typedef struct {
@@ -73,8 +71,10 @@ size_t isn_uart_poll(isn_uart_t *obj);
  * \param port TM4C UART number
  */
 void isn_uart_init(isn_uart_t *obj, isn_layer_t* child, uint8_t port);
-unsigned char UART_PutArray(uint8_t* dest,uint8_t size,uint32_t base, uint32_t uDMAbase);
-unsigned char UART_SpiUartReadRxData(void);
-void ConfigureUART(uint8_t hwVersionMotherboard);
+uint8_t UART_PutArray(uint8_t* dest,uint8_t size,uint32_t base, uint32_t uDMAbase);
+void configureUART(uint8_t hwVersionMotherboard);
+void UARTBlockingWrite(uint32_t ui32Base, uint8_t* UARTdata, uint32_t UARTDataCount);
+extern void errorSystemStatusReport(uint32_t *uartFrameError);
+
 
 #endif

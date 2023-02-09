@@ -112,7 +112,7 @@ static size_t isn_frame_recv(isn_layer_t *drv, const void *src, size_t size, isn
     isn_frame_t *obj = (isn_frame_t *)drv;
     const volatile uint8_t *buf = src;
 
-    if (isn_clock_elapsed(obj->last_ts) > obj->frame_timeout) {
+    if (obj->state == IS_IN_MESSAGE && isn_clock_elapsed(obj->last_ts) > obj->frame_timeout) {
         obj->state = IS_NONE;
         if (obj->recv_len) {
             obj->drv.stats.rx_dropped++;
@@ -126,7 +126,7 @@ static size_t isn_frame_recv(isn_layer_t *drv, const void *src, size_t size, isn
         return size;
     }
 
-    for (uint8_t i=0; i<size; i++, buf++) {
+    for (uint8_t i=0; i<size;) {
         switch (obj->state) {
             case IS_NONE: {
                 if (*buf > 0x80) {
@@ -143,6 +143,7 @@ static size_t isn_frame_recv(isn_layer_t *drv, const void *src, size_t size, isn
                 else {
                     obj->recv_buf[obj->recv_size++] = *buf;   // collect other data to be passed to OTHER ..
                 }
+                i++; buf++;
                 break;
             }
             case IS_IN_MESSAGE: {
@@ -171,6 +172,7 @@ static size_t isn_frame_recv(isn_layer_t *drv, const void *src, size_t size, isn
                         obj->drv.stats.rx_counter += obj->recv_size;
                     }
                 }
+                i++; buf++;
                 break;
             }
             default:

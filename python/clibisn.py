@@ -320,3 +320,9 @@ class UDP:
         clib.isn_udp_driver_poll.argtypes = (c_void_p, c_long)
         return clib.isn_udp_driver_poll(self.obj, c_long(1000))
 
+    def add_client(self, host, port):
+        chost = c_char_p(host.encode('utf-8'))
+        cport = c_char_p(port.encode('utf-8'))
+
+        clib.isn_udp_driver_addclient.argtypes = (c_void_p, c_char_p, c_char_p)
+        return clib.isn_udp_driver_addclient(self.obj, chost, cport)

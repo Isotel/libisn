@@ -18,12 +18,10 @@
 extern isn_uart_t isn_uart_host, isn_uart_debug;
 static isn_uart_t *objs[2];
 
-#define UART_uDMA
-
 /**\{ */
 
-unsigned char UART_PutArray(uint8_t* dest,uint8_t size,uint32_t base,uint32_t uDMAbase){
-
+uint8_t UART_PutArray(uint8_t* dest, uint8_t size, uint32_t base, uint32_t uDMAbase)
+{
 #ifdef UART_uDMA
    uDMAChannelTransferSet(uDMAbase | UDMA_PRI_SELECT, UDMA_MODE_BASIC, dest, (void *) (base + UART_O_DR),size);
    uDMAChannelEnable(uDMAbase);
@@ -70,7 +68,7 @@ static void isn_uart_free(isn_layer_t *drv, const void *ptr) {
 
 static int isn_uart_send(isn_layer_t *drv, void *dest, size_t size) {
     isn_uart_t *obj = (isn_uart_t *)drv;
-    assert(size <= TXBUF_SIZE);
+    assert(size <= UART_TXBUF_SIZE);
     while (uDMAChannelIsEnabled(obj->DMAtx));
     UART_PutArray(dest,size,obj->base,obj->DMAtx);
     isn_uart_free(drv, dest);           // free buffer, however need to block use of buffer until sent out
@@ -104,41 +102,51 @@ size_t isn_uart_poll(isn_uart_t *obj) {
 void UART0_Handler(void) {
     uint32_t status = UARTIntStatus(UART0_BASE,0);
     UARTIntClear(UART0_BASE,status);
-    if (status & (UART_INT_FE|UART_INT_PE|UART_INT_BE|UART_INT_OE)) {
+    if (status & (UART_INT_FE|UART_INT_PE|UART_INT_BE|UART_INT_OE))
+    {
         UARTRxErrorClear(UART0_BASE);
-        while (UARTCharsAvail(UART0_BASE)) {
+        while (UARTCharsAvail(UART0_BASE))
+        {
             UARTCharGetNonBlocking(UART0_BASE);
         }
         objs[0]->drv.stats.rx_errors++;
     }
-    else if (status & (UART_INT_RX|UART_INT_RT) ) {
-        while (UARTCharsAvail(UART0_BASE) && objs[0]->rx_size < UART_RXBUF_SIZE) {
+    else if (status & (UART_INT_RX|UART_INT_RT) )
+    {
+        while (UARTCharsAvail(UART0_BASE) && objs[0]->rx_size < UART_RXBUF_SIZE)
+        {
             objs[0]->rxbuf[objs[0]->rx_size++] = UARTCharGetNonBlocking(UART0_BASE);
         }
     }
 }
 
-void UART1_Handler(void) {
+void UART1_Handler(void)
+{
     uint32_t status = UARTIntStatus(UART1_BASE,0);
     UARTIntClear(UART1_BASE,status);
-    if (status & (UART_INT_FE|UART_INT_PE|UART_INT_BE|UART_INT_OE)) {
+    if (status & (UART_INT_FE|UART_INT_PE|UART_INT_BE|UART_INT_OE))
+    {
         UARTRxErrorClear(UART1_BASE);
-        while (UARTCharsAvail(UART1_BASE)) {
+        while (UARTCharsAvail(UART1_BASE))
+        {
             UARTCharGetNonBlocking(UART1_BASE);
         }
         objs[1]->drv.stats.rx_errors++;
-        HWREG(UART_BASE + UART_O_DR) = '$';
+        errorSystemStatusReport(&objs[1]->drv.stats.rx_errors);
     }
-    else if (status & (UART_INT_RX|UART_INT_RT) ) {
-        while (UARTCharsAvail(UART1_BASE) && objs[1]->rx_size < UART_RXBUF_SIZE) {
+    else if (status & (UART_INT_RX|UART_INT_RT) )
+    {
+        while (UARTCharsAvail(UART1_BASE) && objs[1]->rx_size < UART_RXBUF_SIZE)
+        {
             objs[1]->rxbuf[objs[1]->rx_size++] = UARTCharGetNonBlocking(UART1_BASE);
         }
     }
 }
 
-void ConfigureUART(uint8_t hwVersionMotherboard)
+void configureUART(uint8_t hwVersionMotherboard)
 {   // debug console - UART6
-    if(hwVersionMotherboard <= 4 ) {
+    if(hwVersionMotherboard <= 4 )
+    {
         UART_BASE = UART0_BASE;
         SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
         SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);
@@ -148,7 +156,9 @@ void ConfigureUART(uint8_t hwVersionMotherboard)
         UARTClockSourceSet(UART_BASE, UART_CLOCK_PIOSC);
         UARTFIFOEnable(UART_BASE);
         UARTStdioConfig(0, 115200, 16000000);
-    } else {
+    }
+    else
+    {
         UART_BASE = UART6_BASE;
         SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOP);
         SysCtlPeripheralEnable(SYSCTL_PERIPH_UART6);
@@ -162,8 +172,18 @@ void ConfigureUART(uint8_t hwVersionMotherboard)
     }
 }
 
+void UARTBlockingWrite(uint32_t ui32Base, uint8_t * UARTdata, uint32_t UARTDataCount)
+{
+    while (UARTDataCount)
+    {
+        UARTCharPut(ui32Base, *UARTdata);
+        UARTdata++;
+        UARTDataCount--;
+    }
+}
 
-void isn_uart_init(isn_uart_t *obj, isn_layer_t* child, uint8_t port) {
+void isn_uart_init(isn_uart_t *obj, isn_layer_t* child, uint8_t port)
+{
     uint32_t status;
     obj->drv.getsendbuf = isn_uart_getsendbuf;
     obj->drv.send = isn_uart_send;

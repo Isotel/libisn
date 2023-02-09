@@ -250,6 +250,7 @@ int isn_msg_discardpending(isn_message_t *obj) {
             count++;
         }
     }
+    obj->active = 0;
     obj->lock = 0;
     return count;
 }

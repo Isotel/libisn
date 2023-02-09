@@ -81,7 +81,15 @@ static isn_clock_counter_t delay;
 static size_t recv_thr = 1;
 static isn_uart_t *this;
 
+
 #if defined(UART_RX8E1_DESERIALIZER_F0_REG)
+
+// Error counter is optional
+# if !defined(UART_RX8E1_ERRORS_COUNT_REG)
+# define UART_RX8E1_ERRORS_Stop()
+# define UART_RX8E1_ERRORS_Start()
+static uint8_t UART_RX8E1_ERRORS_COUNT_REG;
+# endif
 
 #define UART_RX8E1_COUNT_MASK   0x7F
 static uint8_t uart_rx8e1_count;    ///< reflects the last/old state of the rx down-counter register
@@ -103,12 +111,17 @@ static uint8_t uart_tx8e1_count;    ///< reflects the last/old state of the rx d
 void UART_Start() {
     UART_RX8E1_TIMER_Start();
     UART_RX8E1_COUNT_Stop();
+    UART_RX8E1_ERRORS_Stop();
     UART_TX8E1_COUNT_Stop();
     UART_RX8E1_COUNT_COUNT_REG = uart_rx8e1_count = 0;
+    UART_RX8E1_ERRORS_COUNT_REG = 0;
     UART_TX8E1_COUNT_COUNT_REG = uart_tx8e1_count = 0;
     UART_RX8E1_COUNT_Start();
+    UART_RX8E1_ERRORS_Start();
     UART_TX8E1_COUNT_Start();
     UART_RX8E1_DESERIALIZER_F0_CLEAR;
+
+    rxb_err = 0;
 }
 
 #endif
@@ -149,6 +162,11 @@ static void rx_isr__() {
         }
         if (status & UART_RX_STS_FIFO_NOTEMPTY) {
 #else
+        // mask msb bit, which is invalid, but rather shift to left to sub/get the diff
+        int8_t errors_diff = (UART_RX8E1_ERRORS_COUNT_REG << 1) - (rxb_err << 1);
+        rxb_err += errors_diff >> 1;
+        //rxb_err = UART_RX8E1_ERRORS_COUNT_REG & 0x7f;
+
         while (uart_rx8e1_count != (UART_RX8E1_COUNT_COUNT_REG & UART_RX8E1_COUNT_MASK)) {
             uart_rx8e1_count = (uart_rx8e1_count-1) & UART_RX8E1_COUNT_MASK;
 #endif

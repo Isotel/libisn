@@ -21,6 +21,10 @@ class UDPackDemo:
         self.counter = c_ulong(0)
         self.pval = Pack(0xF, 0x0102, 0x04050607, 0.1234)
         self.msg = None
+        self.serial_cb = self.get_serial_cb()
+        self.counter_cb = self.get_counter_cb()
+        self.packed_cb = self.get_packed_cb()
+        self.ping_cb = self.get_ping_cb()
 
     def get_serial_cb(self):
         return get_cbptr(lambda x: addressof(self.serial))
@@ -50,12 +54,12 @@ class UDPackDemo:
     def start(self, port=33010):
 
         self.msg = Message(4)
-        self.msg.add("%T0{UDP Example2} V1.1 {#sno}={%<Lx}", sizeof(self.serial), self.get_serial_cb())
-        self.msg.add("Example {:counter}={%lu}", sizeof(self.counter), self.get_counter_cb())
-        self.msg.add("P {:p1}={%hx}{:p2}={%x}{:p3}={%lx}{:p4}={%f}", sizeof(self.pval), self.get_packed_cb())
+        self.msg.add("%T0{UDP Example2} V1.1 {#sno}={%<Lx}", sizeof(self.serial), self.serial_cb)
+        self.msg.add("Example {:counter}={%lu}", sizeof(self.counter), self.counter_cb)
+        self.msg.add("P {:p1}={%hx}{:p2}={%x}{:p3}={%lx}{:p4}={%f}", sizeof(self.pval), self.packed_cb)
         self.msg.add("%!", 0, None)
 
-        ping_rcv = Receiver(self.get_ping_cb(), ptr=True)
+        ping_rcv = Receiver(self.ping_cb, ptr=True)
 
         dispatch = Dispatch(2)
         dispatch.add(ISN_PROTO_MSG, self.msg.obj)
@@ -65,6 +69,8 @@ class UDPackDemo:
         s = UDP(port, dispatch, logging=True)
         self.msg.init(s, logging=True)
         print(str(s.obj))
+
+       # s.add_client("localhost", "31000")
 
         c = 0
         while True:

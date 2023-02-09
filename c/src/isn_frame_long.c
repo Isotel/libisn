@@ -136,7 +136,7 @@ static size_t isn_frame_long_recv(isn_layer_t *drv, const void *src, size_t size
     isn_frame_long_t *obj = (isn_frame_long_t *)drv;
     const volatile uint8_t *buf = src;
 
-    if (isn_clock_elapsed(obj->last_ts) > obj->frame_timeout) {
+    if (obj->state != IS_FW_MESSAGE && isn_clock_elapsed(obj->last_ts) > obj->frame_timeout) {
         obj->state = IS_NONE;
         if (obj->recv_len) obj->drv.stats.rx_dropped++;
         obj->recv_size = obj->recv_len = 0;
@@ -148,7 +148,7 @@ static size_t isn_frame_long_recv(isn_layer_t *drv, const void *src, size_t size
         return size;
     }
 
-    for (uint8_t i=0; i<size; i++, buf++) {
+    for (uint8_t i=0; i<size;) {
         switch (obj->state) {
             case IS_NONE: {
                 if ( (*buf & ISN_PROTO_FRAME_LONG_MASK) == ISN_PROTO_FRAME_LONG) {
@@ -163,6 +163,7 @@ static size_t isn_frame_long_recv(isn_layer_t *drv, const void *src, size_t size
                 else {
                     obj->recv_buf[obj->recv_size++] = *buf;   // collect other data to be passed to OTHER ..
                 }
+                i++; buf++;
                 break;
             }
             case IS_IN_PROTOCOL: {
@@ -170,6 +171,7 @@ static size_t isn_frame_long_recv(isn_layer_t *drv, const void *src, size_t size
                 obj->crc  = crc16_ccitt(obj->crc, *buf);
                 obj->recv_len |= *buf;
                 obj->recv_len++;
+                i++; buf++;
                 break;
             }
             case IS_IN_MESSAGE: {
@@ -181,6 +183,7 @@ static size_t isn_frame_long_recv(isn_layer_t *drv, const void *src, size_t size
                     obj->recv_buf[obj->recv_size++] = *buf;
                     obj->crc = crc16_ccitt(obj->crc, *buf);
                 }
+                i++; buf++;
                 break;
             }
             case IS_IN_CRC: {
@@ -196,6 +199,7 @@ static size_t isn_frame_long_recv(isn_layer_t *drv, const void *src, size_t size
                     obj->recv_size = obj->recv_len = 0;
                     obj->state = IS_NONE;
                 }
+                i++; buf++;
             }
             default:
                 break;
